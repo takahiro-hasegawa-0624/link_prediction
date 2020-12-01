@@ -802,11 +802,11 @@ class Link_Prediction_Model():
 
         self.start_time = datetime.datetime.now()
 
-        self.path_best_model = f"./output/{self.dataset_name}/{self.model.__class__.__name__}/activation_{self.activation}/sigmoidbias_{'True' if self.sigmoid_bias is True else 'False'}/selfloopmask_{'True' if self.self_loop_mask is True else 'False'}/numlayers_{self.num_layers}/layeroutputs_{self.model.hidden_channels_str}/epochs_{self.num_epochs}/{self.start_time.strftime('%Y%m%d_%H%M')}/usebestmodel_True"
+        self.path_best_model = f"./output/{self.dataset_name}/{self.model.__class__.__name__}/activation_{self.activation}/sigmoidbias_{'True' if self.sigmoid_bias is True else 'False'}/numlayers_{self.num_layers}/layeroutputs_{self.model.hidden_channels_str}/negative_sampling_ratio_{self.negative_sampling_ratio}/epochs_{self.num_epochs}/{self.start_time.strftime('%Y%m%d_%H%M')}/usebestmodel_True"
         if not os.path.isdir(self.path_best_model):
             os.makedirs(self.path_best_model)
 
-        self.path_last_model = f"./output/{self.dataset_name}/{self.model.__class__.__name__}/activation_{self.activation}/sigmoidbias_{'True' if self.sigmoid_bias is True else 'False'}/selfloopmask_{'True' if self.self_loop_mask is True else 'False'}/numlayers_{self.num_layers}/layeroutputs_{self.model.hidden_channels_str}/epochs_{self.num_epochs}/{self.start_time.strftime('%Y%m%d_%H%M')}/usebestmodel_False"
+        self.path_last_model = f"./output/{self.dataset_name}/{self.model.__class__.__name__}/activation_{self.activation}/sigmoidbias_{'True' if self.sigmoid_bias is True else 'False'}/numlayers_{self.num_layers}/layeroutputs_{self.model.hidden_channels_str}/negative_sampling_ratio_{self.negative_sampling_ratio}/epochs_{self.num_epochs}/{self.start_time.strftime('%Y%m%d_%H%M')}/usebestmodel_False"
         if not os.path.isdir(self.path_last_model):
             os.makedirs(self.path_last_model)
 
