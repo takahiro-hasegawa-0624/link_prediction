@@ -1,4 +1,4 @@
-# link_prediction
+# Link_Prediction_Model with an example
 
 `example.ipynb`に`Link_Prediction_Model`の使用例を記載しています。
 
