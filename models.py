@@ -1015,7 +1015,7 @@ class Link_Prediction_Model():
         # 特徴量ベクトルのノルムのヒストグラムを図示
         fig, ax = plt.subplots(figsize=(10, 5), dpi=150)
         z_norm_flatten = z_norm.flatten()
-        ax.hist(z_norm_flatten[(np.isinf(z_norm_flatten) is False)], bins=100)
+        ax.hist(z_norm_flatten, bins=100)
         ax.set_xscale('log')
         ax.set_xlabel('norms of the feature vectors')
         ax.set_title(f"Norms of feature vectors ({self.model.__class__.__name__} / activation_{self.activation} / sigmoidbias_{self.sigmoid_bias} / layers_{self.num_layers})")
