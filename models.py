@@ -1104,7 +1104,7 @@ class Link_Prediction_Model():
         log_dic['lin_weight_decay'] = self.optimizer.param_groups[2]['weight_decay']
         log_dic['lin_lr'] = self.optimizer.param_groups[2]['lr']
         log_dic['num_layers'] = self.num_layers
-        log_dic['hidden_channels'] = self.hidden_channels
+        log_dic['hidden_channels'] = self.model.hidden_channels_str
         log_dic['negative_sampling_ratio'] = self.negative_sampling_ratio
         log_dic['num_epochs'] = self.num_epochs
         log_dic['validation'] = validation
