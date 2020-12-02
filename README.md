@@ -2,7 +2,7 @@
 
 `example.ipynb`に`Link_Prediction_Model`の使用例を記載しています。
 
-詳細な設定は、`model.py`のdocstringをご覧ください。
+詳細な設定は、`models.py`のdocstringをご覧ください。
 
 ## ディレクトリ構成図
 
@@ -12,7 +12,7 @@
 .  
 ├── data
 │   ├── cora <-自動で作成される
-│   ├── factset
+│   └── factset
 │         └── processed_data  
 │               ├── edge.csv  
 │               ├── feature.csv  
