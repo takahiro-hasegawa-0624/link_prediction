@@ -759,7 +759,7 @@ class Link_Prediction_Model():
         edge_index = torch.cat([pos_edge_index, neg_edge_index], dim = -1)
         
         if pos_edge_index.size(1)==0:
-            return None, None
+            return None, None, None
 
         link_probs = self.model.encode_decode(self.data.x)[edge_index.cpu().numpy()]
         link_labels = my_utils.get_link_labels(pos_edge_index, neg_edge_index).to(self.device)
@@ -790,12 +790,13 @@ class Link_Prediction_Model():
         
         return float(loss.cpu()), link_labels.cpu(), link_probs.cpu()
 
-    def run_training(self, num_epochs):
+    def run_training(self, num_epochs, print_log = True):
         '''
         指定したepoch数、modelを学習する。
 
         Parameters:
             num_epochs (int): ephch数. 
+            print_log (bool): If set to True, 各epochのlossとscoreを表示する. (Default: True)
         '''
         start_epoch = self.num_epochs
         self.num_epochs += num_epochs
