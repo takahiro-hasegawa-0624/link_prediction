@@ -855,7 +855,8 @@ class Link_Prediction_Model():
             log = 'Epoch: {:03d}/{:03d}, Train_loss: {:.4f}, Val_loss: {:.4f}, Val_Score: {:.4f}, (Test_loss: {:.4f}, Test_score: {:.4f})\n'
             log = log.format(epoch, self.num_epochs, train_loss, val_loss, val_auc, test_loss, test_auc)
             self.logs += log
-            print(log, end='')
+            if print_log is True:
+                print(log, end='')
 
         with open(f"{self.path_last_model}/model.pkl", 'wb') as f:
             cloudpickle.dump(self.model, f)
