@@ -69,7 +69,7 @@ class NN(torch.nn.Module):
         '''
         Args:
             data (torch_geometric.data.Data): グラフデータ.
-            num_hidden_channels (int or None): 隠れ層の出力数. 全ての層で同じ値が適用される. (Default: None)
+            num_hidden_channels (int or None): 隠れ層の出力次元数. 全ての層で同じ値が適用される. (Default: None)
             num_layers (int or None): 隠れ層の数. (Default: None)
             hidden_channels (list of int, or None): 各隠れ層の出力の次元. 指定するとnum_hidden_channels とnum_layersは無効化される. (Default: None)
             activation (obj`int` or None): activation functionを指定。None, "relu", "leaky_relu", or "tanh". (Default: None)
@@ -208,7 +208,7 @@ class GCN(torch.nn.Module):
         Args:
             data (torch_geometric.data.Data): グラフデータ.
             train_pos_edge_adj_t (torch.SparseTensor[2, num_pos_edges]): trainデータのリンク.
-            num_hidden_channels (int or None): 隠れ層の出力数. 全ての層で同じ値が適用される. (Default: None)
+            num_hidden_channels (int or None): 隠れ層の出力次元数. 全ての層で同じ値が適用される. (Default: None)
             num_layers (int or None): 隠れ層の数. (Default: None)
             hidden_channels (list of int, or None): 各隠れ層の出力の配列. 指定するとnum_hidden_channels とnum_layersは無効化される. (Default: None)
             activation (obj`int` or None): activation functionを指定。None, "relu", "leaky_relu", or "tanh". (Default: None)
@@ -347,7 +347,7 @@ class GCNII(torch.nn.Module):
         Args:
             data (torch_geometric.data.Data): グラフデータ.
             train_pos_edge_adj_t (torch.SparseTensor[2, num_pos_edges]): trainデータのリンク.
-            num_hidden_channels (int or None): 隠れ層の出力数. 全ての層で同じ値が適用される.
+            num_hidden_channels (int or None): 隠れ層の出力次元数. 全ての層で同じ値が適用される.
             num_layers (int or None): 隠れ層の数.
             alpha (float): .
             theta (float): .
@@ -472,7 +472,7 @@ class Link_Prediction_Model():
         activation (obj`int` or None): activation functionを指定。None, "relu", "leaky_relu", or "tanh". (Default: None)
         sigmoid_bias (bool): If seto to True, sigmoid関数の入力にバイアス項が加わる (sigmoid(z^tz + b)。 (Default: False)
         self_loop_mask (bool): If seto to True, 特徴量の内積が必ず正となり、必ず存在確率が0.5以上となる自己ループを除外する。 (Default: False)
-        num_hidden_channels (int or None): 隠れ層の出力数. 全ての層で同じ値が適用される.
+        num_hidden_channels (int or None): 隠れ層の出力次元数. 全ての層で同じ値が適用される.
         num_layers (int or None): 隠れ層の数.
         hidden_channels (list of int, or None): 各隠れ層の出力の配列. 指定するとnum_hidden_channels とnum_layersは無効化される. (Default: None)
         alpha (float): convolution後に初期層を加える割合. (Default: 0.1)
@@ -561,7 +561,7 @@ class Link_Prediction_Model():
             activation (obj`int` or None): activation functionを指定。None, "relu", "leaky_relu", or "tanh". (Default: None)
             sigmoid_bias (bool): If set to to True, sigmoid関数の入力にバイアス項が加わる (sigmoid(z^tz + b)。 (Default: False)
             self_loop_mask (bool): If set to to True, 特徴量の内積が必ず正となり、必ず存在確率が0.5以上となる自己ループを除外する。 (Default: False)
-            num_hidden_channels (int or None): 隠れ層の出力数. 全ての層で同じ値が適用される.
+            num_hidden_channels (int or None): 隠れ層の出力次元数. 全ての層で同じ値が適用される.
             num_layers (int or None): 隠れ層の数.
             hidden_channels (list of int, or None): 各隠れ層の出力の配列. 指定するとnum_hidden_channels とnum_layersは無効化される. (Default: None)
             alpha (float): convolution後に初期層を加える割合. (Default: 0.1)
@@ -622,11 +622,18 @@ class Link_Prediction_Model():
                         sigmoid_bias = sigmoid_bias).to(self.device)
 
         # optimizerはAdamをdefaultとする。self.my_optimizerで指定可能。
-        self.optimizer = torch.optim.Adam([
-            {'params':self.model.bias.parameters(),'weight_decay':0.02},
-            {'params':self.model.convs.parameters(),'weight_decay':0.01},
-            {'params':self.model.lins.parameters(),'weight_decay':0.01}
-            ],lr=0.01)
+        if activation == 'tanh':
+            self.optimizer = torch.optim.Adam([
+                {'params':self.model.bias.parameters(),'weight_decay':0.2,'lr':0.05},
+                {'params':self.model.convs.parameters(),'weight_decay':0.01,'lr':0.005},
+                {'params':self.model.lins.parameters(),'weight_decay':0.01,'lr':0.005}
+                ])
+        else:
+            self.optimizer = torch.optim.Adam([
+                {'params':self.model.bias.parameters(),'weight_decay':0.01,'lr':0.05},
+                {'params':self.model.convs.parameters(),'weight_decay':0.01,'lr':0.005},
+                {'params':self.model.lins.parameters(),'weight_decay':0.01,'lr':0.005}
+                ])
 
 
         self.num_hidden_channels = num_hidden_channels
