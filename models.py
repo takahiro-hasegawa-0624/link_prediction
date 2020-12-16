@@ -123,12 +123,13 @@ class NN(torch.nn.Module):
         self.self_loop_mask = self_loop_mask
         self.dropout = dropout
 
-    def encode(self, x):
+    def encode(self, x, edge_inde = None):
         '''
         ノードの特徴量をモデルに入力し、モデルからの出力を得る.
 
         Parameters:
             x (torch.tensor[num_nodes, input_channels]): モデルの入力.
+            edge_index (None): グラフのリンクの端点のインデックス. NN classではgraph cnvolutionをしないためNone.
 
         Returns:
             z (torch.tensor[num_nodes, output_channels]): モデルの出力.
@@ -170,18 +171,19 @@ class NN(torch.nn.Module):
                 probs = torch.sigmoid(torch.mm(z, z.t()))
         return probs
 
-    def encode_decode(self, x):
+    def encode_decode(self, x, edge_index=None):
         '''
         ノードの特徴量をモデルに入力し、モデルからの出力を得る.
 
         Parameters:
             x (torch.tensor[num_nodes, input_channels]): モデルの入力.
+            edge_index (None): グラフのリンクの端点のインデックス. NN classではgraph cnvolutionをしないためNone.
 
         Returns:
             probs (torch.tensor[num_edges, num_edges]: リンクの存在確率の隣接行列.
         '''
 
-        z = self.encode(x)
+        z = self.encode(x, edge_index)
         probs = self.decode(z)
         return probs
 
@@ -261,20 +263,24 @@ class GCN(torch.nn.Module):
         self.self_loop_mask = self_loop_mask
         self.dropout = dropout
 
-    def encode(self, x):
+    def encode(self, x, edge_index=None):
         '''
         ノードの特徴量をモデルに入力し、モデルからの出力を得る.
 
         Parameters:
             x (torch.tensor[num_nodes, input_channels]): モデルの入力.
+            edge_index (torch.tensor[2, num_edges]): グラフのリンクの端点のインデックス.
 
         Returns:
             z (torch.tensor[num_nodes, output_channels]): モデルの出力.
         '''
+        if edge_index is None:
+            edge_index = self.train_pos_edge_adj_t
+
         z = x
         for i, conv in enumerate(self.convs):
             z = F.dropout(z, self.dropout, training = self.training)
-            z = conv(z, self.train_pos_edge_adj_t)
+            z = conv(z, edge_index)
             if i < len(self.convs) - 1:
                 z = self.batchnorms[i](z)
                 if self.activation == "relu":
@@ -308,18 +314,20 @@ class GCN(torch.nn.Module):
                 probs = torch.sigmoid(torch.mm(z, z.t()))
         return probs
 
-    def encode_decode(self, x):
+    def encode_decode(self, x, edge_index=None):
         '''
         ノードの特徴量をモデルに入力し、モデルからの出力を得る.
 
         Parameters:
             x (torch.tensor[num_nodes, input_channels]): モデルの入力.
+            edge_index (torch.tensor[2, num_edges]): グラフのリンクの端点のインデックス.
 
         Returns:
             probs (torch.tensor[num_edges, num_edges]: リンクの存在確率の隣接行列.
         '''
-
-        z = self.encode(x)
+        if edge_index is None:
+            edge_index = self.train_pos_edge_adj_t
+        z = self.encode(x, edge_index)
         probs = self.decode(z)
         return probs
 
@@ -384,16 +392,20 @@ class GCNII(torch.nn.Module):
         self.self_loop_mask = self_loop_mask
         self.dropout = dropout    
 
-    def encode(self, x):
+    def encode(self, x, edge_index=None):
         '''
         ノードの特徴量をモデルに入力し、モデルからの出力を得る.
 
         Parameters:
             x (torch.tensor[num_nodes, input_channels]): モデルの入力.
+            edge_index (torch.tensor[2, num_edges]): グラフのリンクの端点のインデックス.
 
         Returns:
             z (torch.tensor[num_nodes, output_channels]): モデルの出力.
         '''
+        if edge_index is None:
+            edge_index = self.train_pos_edge_adj_t
+
         # 線形変換で次元削減して入力とする
         # x = F.dropout(self.data.x, self.dropout, training=self.training)
         z = self.lins[0](x)
@@ -402,7 +414,7 @@ class GCNII(torch.nn.Module):
 
         for i, conv in enumerate(self.convs):
             z = F.dropout(z, self.dropout, training = self.training)
-            z = conv(z, x_0, self.train_pos_edge_adj_t)
+            z = conv(z, x_0, edge_index)
             if i < len(self.convs) - 1:
                 z = self.batchnorms[i](z)
                 if self.activation == "relu":
@@ -436,18 +448,21 @@ class GCNII(torch.nn.Module):
                 probs = torch.sigmoid(torch.mm(z, z.t()))
         return probs
 
-    def encode_decode(self, x):
+    def encode_decode(self, x, edge_index=None):
         '''
         ノードの特徴量をモデルに入力し、モデルからの出力を得る.
 
         Parameters:
             x (torch.tensor[num_nodes, input_channels]): モデルの入力.
+            edge_index (torch.tensor[2, num_edges]): グラフのリンクの端点のインデックス.
 
         Returns:
             probs (torch.tensor[num_edges, num_edges]: リンクの存在確率の隣接行列.
         '''
+        if edge_index is None:
+            edge_index = self.train_pos_edge_adj_t
 
-        z = self.encode(x)
+        z = self.encode(x, edge_index)
         probs = self.decode(z)
         return probs
 
@@ -522,16 +537,20 @@ class GCNIIwithJK(torch.nn.Module):
         self.self_loop_mask = self_loop_mask
         self.dropout = dropout    
 
-    def encode(self, x):
+    def encode(self, x, edge_index=None):
         '''
         ノードの特徴量をモデルに入力し、モデルからの出力を得る.
 
         Parameters:
             x (torch.tensor[num_nodes, input_channels]): モデルの入力.
+            edge_index (torch.tensor[2, num_edges]): グラフのリンクの端点のインデックス.
 
         Returns:
             z (torch.tensor[num_nodes, output_channels]): モデルの出力.
         '''
+        if edge_index is None:
+            edge_index = self.train_pos_edge_adj_t
+
         # 線形変換で次元削減して入力とする
         # x = F.dropout(self.data.x, self.dropout, training=self.training)
         z = self.lins[0](x)
@@ -541,7 +560,7 @@ class GCNIIwithJK(torch.nn.Module):
         zs = []
         for i, conv in enumerate(self.convs):
             z = F.dropout(z, self.dropout, training = self.training)
-            z = conv(z, x_0, self.train_pos_edge_adj_t)
+            z = conv(z, x_0, edge_index)
             zs += [z]
             if (i < len(self.convs) - 1) or (i%4==3):
                 z = self.batchnorms[i](z)
@@ -580,18 +599,21 @@ class GCNIIwithJK(torch.nn.Module):
                 probs = torch.sigmoid(torch.mm(z, z.t()))
         return probs
 
-    def encode_decode(self, x):
+    def encode_decode(self, x, edge_index=None):
         '''
         ノードの特徴量をモデルに入力し、モデルからの出力を得る.
 
         Parameters:
             x (torch.tensor[num_nodes, input_channels]): モデルの入力.
+            edge_index (torch.tensor[2, num_edges]): グラフのリンクの端点のインデックス.
 
         Returns:
             probs (torch.tensor[num_edges, num_edges]: リンクの存在確率の隣接行列.
         '''
+        if edge_index is None:
+            edge_index = self.train_pos_edge_adj_t
 
-        z = self.encode(x)
+        z = self.encode(x, edge_index)
         probs = self.decode(z)
         return probs
 
@@ -691,8 +713,9 @@ class Link_Prediction_Model():
                 self_loop_mask = False, 
                 num_hidden_channels = None, 
                 num_layers = None, 
-                jk_mode = 'cat', 
                 hidden_channels = None, 
+                negative_injection = False,
+                jk_mode = 'cat', 
                 alpha = 0.1, 
                 theta = 0.5, 
                 shared_weights = True, 
@@ -709,8 +732,9 @@ class Link_Prediction_Model():
             self_loop_mask (bool): If set to to True, 特徴量の内積が必ず正となり、必ず存在確率が0.5以上となる自己ループを除外する。 (Default: False)
             num_hidden_channels (int or None): 隠れ層の出力次元数. 全ての層で同じ値が適用される.
             num_layers (int or None): 隠れ層の数.
-            jk_mode (:obj:`str`): aggregation方法. ('cat', 'max' or 'lstm'). (Default: 'cat)
             hidden_channels (list of int, or None): 各隠れ層の出力の配列. 指定するとnum_hidden_channels とnum_layersは無効化される. (Default: None)
+            negative_injection (bool): If set to to True, negative samplingされたedgeをconvolutionに含める.
+            jk_mode (:obj:`str`): aggregation方法. ('cat', 'max' or 'lstm'). (Default: 'cat)
             alpha (float): convolution後に初期層を加える割合. (Default: 0.1)
             theta (float): .
             shared_weights (bool): . (Default: True)
@@ -801,6 +825,7 @@ class Link_Prediction_Model():
         self.num_hidden_channels = num_hidden_channels
         self.num_layers = self.model.num_layers
         self.hidden_channels = hidden_channels
+        self.negative_injection = negative_injection
         self.alpha = alpha
         self.theta = theta
         self.shared_weights = shared_weights
@@ -912,7 +937,12 @@ class Link_Prediction_Model():
                 num_neg_samples = self.num_negative_samples)
 
             edge_index = torch.cat([self.data.train_pos_edge_index, neg_edge_index], dim = -1)
-            z = self.model.encode(self.data.x)
+
+            if self.negative_injection is True:
+                z = self.model.encode(self.data.x, edge_index=edge_index)
+            else:
+                z = self.model.encode(self.data.x)
+
             link_probs = self.model.decode(z)[edge_index.cpu().numpy()]
 
             link_labels = my_utils.get_link_labels(self.data.train_pos_edge_index, neg_edge_index).to(self.device)
