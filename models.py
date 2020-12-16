@@ -26,7 +26,7 @@ from torch.nn import Linear
 
 import torch_geometric.transforms as T
 from torch_geometric.data import Data
-from torch_geometric.nn import GCNConv, GCN2Conv
+from torch_geometric.nn import GCNConv, GCN2Conv, global_mean_pool, JumpingKnowledge
 from torch_geometric.utils import negative_sampling
 
 import networkx as nx
@@ -451,6 +451,150 @@ class GCNII(torch.nn.Module):
         probs = self.decode(z)
         return probs
 
+class GCNIIwithJK(torch.nn.Module):       
+    '''GCNII with Jumping Knowledge
+
+    ノードの特徴量に対してGCNIIを適用し、Jumping Knowledgeでマルチスケール化
+
+    Attributes:
+        device (:obj:`int`): 'cpu', 'cuda'. 
+        lins (torch.nn.ModuleList): 全結合層のリスト.
+        convs (torch.nn.ModuleList): torch_geometric.nn.GCNConvのリスト.
+        jk_mode (:obj:`str`): aggregation方法. ('cat', 'max' or 'lstm'). (Default: 'cat)
+        bias (torch.nn.ModuleList): sigmoidのbias項をModuleList化.
+        batchnorms (torch.nn.ModuleList): batch normalizationのリスト.
+        activation (:obj:`int` or None): activation functionを指定。None, "relu", "leaky_relu", or "tanh". (Default: None)
+        sigmoid_bias (bool): If seto to True, sigmoid関数の入力にバイアス項が加わる (sigmoid(z^tz + b)。 (Default: False)
+        dropout (float): 各層のDropoutの割合. 
+        num_layers (int or None): 隠れ層の数.
+        hidden_channels_str (str): 各層の出力の次元を文字列として記録
+        train_pos_edge_adj_t (torch.SparseTensor[2, num_pos_edges]): trainデータのリンク.
+    '''    
+
+    def __init__(self, data, train_pos_edge_adj_t, num_hidden_channels, num_layers, jk_mode='cat', alpha=0.1, theta=0.5, shared_weights = True, activation = None, self_loop_mask = True, dropout = 0.0, sigmoid_bias = False):
+        '''
+        Args:
+            data (torch_geometric.data.Data): グラフデータ.
+            train_pos_edge_adj_t (torch.SparseTensor[2, num_pos_edges]): trainデータのリンク.
+            num_hidden_channels (int or None): 隠れ層の出力次元数. 全ての層で同じ値が適用される.
+            num_layers (int or None): 隠れ層の数.
+            jk_mode (:obj:`str`): aggregation方法. ('cat', 'max' or 'lstm'). (Default: 'cat)
+            alpha (float): .
+            theta (float): .
+            shared_weights (bool): . (Default: True)
+            activation (obj`int` or None): activation functionを指定。None, "relu", "leaky_relu", or "tanh". (Default: None)
+            self_loop_mask (bool): If seto to True, 特徴量の内積が必ず正となり、必ず存在確率が0.5以上となる自己ループを除外する。 (Default: False)
+            dropout (float): 各層のDropoutの割合. (Default: 0.0)
+            sigmoid_bias (bool): If seto to True, sigmoid関数の入力にバイアス項が加わる (sigmoid(z^tz + b)。 (Default: False)
+        '''
+        super(GCNIIwithJK, self).__init__()
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+        self.num_layers = num_layers
+        self.train_pos_edge_adj_t = train_pos_edge_adj_t
+        self.hidden_channels_str = (f'{num_hidden_channels}_'*num_layers)[:-1]
+
+        self.lins = torch.nn.ModuleList()
+        self.lins.append(Linear(data.x.size(1), num_hidden_channels))
+
+        self.convs = torch.nn.ModuleList()
+        for layer in range(num_layers):
+            self.convs.append(GCN2Conv(num_hidden_channels, alpha, theta, layer+1, shared_weights = shared_weights, normalize = False))
+
+        self.jk_mode = jk_mode
+        self.jumps = torch.nn.ModuleList()
+        for layer in range(num_layers//4):
+            self.jumps.append(JumpingKnowledge(jk_mode))
+
+        if self.jk_mode == 'cat':
+            self.lins.append(Linear(4 * num_hidden_channels, num_hidden_channels))
+
+        self.batchnorms = torch.nn.ModuleList()
+        for layer in range(num_layers - 1):
+            self.batchnorms.append(torch.nn.BatchNorm1d(num_hidden_channels))
+
+        self.sigmoid_bias = sigmoid_bias
+        self.bias = torch.nn.ModuleList()
+        if self.sigmoid_bias is True:
+            self.bias.append(Bias())
+
+        self.activation = activation
+        self.self_loop_mask = self_loop_mask
+        self.dropout = dropout    
+
+    def encode(self, x):
+        '''
+        ノードの特徴量をモデルに入力し、モデルからの出力を得る.
+
+        Parameters:
+            x (torch.tensor[num_nodes, input_channels]): モデルの入力.
+
+        Returns:
+            z (torch.tensor[num_nodes, output_channels]): モデルの出力.
+        '''
+        # 線形変換で次元削減して入力とする
+        # x = F.dropout(self.data.x, self.dropout, training=self.training)
+        z = self.lins[0](x)
+        # x_0 = z.detach().clone()
+        x_0 = z
+
+        zs = []
+        for i, conv in enumerate(self.convs):
+            z = F.dropout(z, self.dropout, training = self.training)
+            z = conv(z, x_0, self.train_pos_edge_adj_t)
+            zs += [z]
+            if (i < len(self.convs) - 1) or (i%4==3):
+                z = self.batchnorms[i](z)
+                if self.activation == "relu":
+                    z = z.relu()
+                elif self.activation == "leaky_relu":
+                    z = F.leaky_relu(z, negative_slope=0.01)
+                elif self.activation == "tanh":
+                    z = torch.tanh(z)
+
+            if i%4 == 3:
+                z = self.jumps[i//4](zs)
+                if self.jk_mode == 'cat':
+                    z = self.lins[-1](z)
+        return z
+
+    def decode(self, z):
+        '''
+        モデルの出力から、全てのノードの組におけるリンク存在確率を出力する.
+
+        Parameters:
+            z (torch.tensor[num_nodes, output_channels]): モデルの出力.
+
+        Returns:
+            probs (torch.tensor[num_edges, num_edges]: リンクの存在確率の隣接行列.
+        '''
+        if self.sigmoid_bias is True:
+            if self.self_loop_mask is True:
+                probs = torch.sigmoid((self.bias[0](torch.mm(z, z.t()))) * (torch.eye(z.size(0))!=1).to(self.device))
+            else:
+                probs = torch.sigmoid(self.bias[0](torch.mm(z, z.t())))
+        else:
+            if self.self_loop_mask is True:
+                probs = torch.sigmoid((torch.mm(z, z.t())) * (torch.eye(z.size(0))!=1).to(self.device))
+            else:
+                probs = torch.sigmoid(torch.mm(z, z.t()))
+        return probs
+
+    def encode_decode(self, x):
+        '''
+        ノードの特徴量をモデルに入力し、モデルからの出力を得る.
+
+        Parameters:
+            x (torch.tensor[num_nodes, input_channels]): モデルの入力.
+
+        Returns:
+            probs (torch.tensor[num_edges, num_edges]: リンクの存在確率の隣接行列.
+        '''
+
+        z = self.encode(x)
+        probs = self.decode(z)
+        return probs
+
 class Link_Prediction_Model():
     '''Link_Prediction_Model
 
@@ -547,6 +691,7 @@ class Link_Prediction_Model():
                 self_loop_mask = False, 
                 num_hidden_channels = None, 
                 num_layers = None, 
+                jk_mode = 'cat', 
                 hidden_channels = None, 
                 alpha = 0.1, 
                 theta = 0.5, 
@@ -564,6 +709,7 @@ class Link_Prediction_Model():
             self_loop_mask (bool): If set to to True, 特徴量の内積が必ず正となり、必ず存在確率が0.5以上となる自己ループを除外する。 (Default: False)
             num_hidden_channels (int or None): 隠れ層の出力次元数. 全ての層で同じ値が適用される.
             num_layers (int or None): 隠れ層の数.
+            jk_mode (:obj:`str`): aggregation方法. ('cat', 'max' or 'lstm'). (Default: 'cat)
             hidden_channels (list of int, or None): 各隠れ層の出力の配列. 指定するとnum_hidden_channels とnum_layersは無効化される. (Default: None)
             alpha (float): convolution後に初期層を加える割合. (Default: 0.1)
             theta (float): .
@@ -614,6 +760,21 @@ class Link_Prediction_Model():
                         train_pos_edge_adj_t = self.train_pos_edge_adj_t,
                         num_hidden_channels=num_hidden_channels, 
                         num_layers=num_layers, 
+                        alpha=alpha, 
+                        theta=theta, 
+                        shared_weights=True, 
+                        activation = activation,
+                        self_loop_mask = self_loop_mask, 
+                        dropout=dropout,
+                        sigmoid_bias = sigmoid_bias).to(self.device)
+
+        elif self.modelname == 'GCNIIwithJK':
+            self.model = GCNIIwithJK(
+                        data = self.data,
+                        train_pos_edge_adj_t = self.train_pos_edge_adj_t,
+                        num_hidden_channels=num_hidden_channels, 
+                        num_layers=num_layers, 
+                        jk_mode=jk_mode, 
                         alpha=alpha, 
                         theta=theta, 
                         shared_weights=True, 
