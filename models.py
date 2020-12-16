@@ -469,7 +469,7 @@ class Link_Prediction_Model():
 
         modelname (:obj:`str`): 'NN', 'GCN', 'GCNII'を選択.
         model (torch.nn.Module): 上記で定義したNN / GCN / GCNII のいずれか.
-        optimizer (torch.optim): optimizer.
+        optimizer (dic of torch.optim): optimizerの辞書. tagは'bias' (sigmoidのバイアス項), 'convs' (graph convolution), 'lins' (全結合層)
         activation (obj`int` or None): activation functionを指定。None, "relu", "leaky_relu", or "tanh". (Default: None)
         sigmoid_bias (bool): If seto to True, sigmoid関数の入力にバイアス項が加わる (sigmoid(z^tz + b)。 (Default: False)
         self_loop_mask (bool): If seto to True, 特徴量の内積が必ず正となり、必ず存在確率が0.5以上となる自己ループを除外する。 (Default: False)
@@ -623,20 +623,19 @@ class Link_Prediction_Model():
                         sigmoid_bias = sigmoid_bias).to(self.device)
 
         # optimizerはAdamをdefaultとする。self.my_optimizerで指定可能。
+        self.optimizer = {}
         if activation == 'tanh':
-            self.optimizer = torch.optim.Adam([
-                {'params':self.model.bias.parameters(),'weight_decay':0.2,'lr':0.05},
-                {'params':self.model.convs.parameters(),'weight_decay':0.01,'lr':0.005},
-                {'params':self.model.lins.parameters(),'weight_decay':0.01,'lr':0.005}
-                ])
-        else:
-            self.optimizer = torch.optim.Adam([
-                {'params':self.model.bias.parameters(),'weight_decay':0.01,'lr':0.05},
-                {'params':self.model.convs.parameters(),'weight_decay':0.01,'lr':0.005},
-                {'params':self.model.lins.parameters(),'weight_decay':0.01,'lr':0.005}
-                ])
+            self.optimizer['bias'] = torch.optim.Adam(self.model.bias.parameters(), weight_decay=0.2, lr=0.05)
+            self.optimizer['convs'] = torch.optim.Adam(self.model.convs.parameters(), weight_decay=0.01, lr=0.005)
+            self.optimizer['lins'] = torch.optim.Adam(self.model.lins.parameters(), weight_decay=0.01, lr=0.005)
 
-        self.scheduler = None
+        else:
+            self.optimizer['bias'] = torch.optim.Adam(self.model.bias.parameters(), weight_decay=0.01, lr=0.05)
+            self.optimizer['convs'] = torch.optim.Adam(self.model.convs.parameters(), weight_decay=0.01, lr=0.005)
+            self.optimizer['lins'] = torch.optim.Adam(self.model.lins.parameters(), weight_decay=0.01, lr=0.005)
+
+        # learning rate のscheduler はself.my_schedulerで指定可能。
+        self.scheduler = {}
 
         self.num_hidden_channels = num_hidden_channels
         self.num_layers = self.model.num_layers
@@ -690,7 +689,8 @@ class Link_Prediction_Model():
         trainを開始した後では、変更しない.
 
         Parameters:
-            optimizer (torch.optim): optimizer.
+            optimizer (dic of torch.optim): optimizerの辞書. tagは'bias' (sigmoidのバイアス項), 'convs' (graph convolution), 'lins' (全結合層).
+
         '''
         if self.num_epochs != 0:
             print('unable to change the optimizer while training.')
@@ -703,7 +703,7 @@ class Link_Prediction_Model():
         trainを開始した後では、変更しない.
 
         Parameters:
-            scheduler (torch.optim.lr_scheduler): scheduler.
+            scheduler (dict of torch.optim.lr_scheduler): scheduler. tagは'bias' (sigmoidのバイアス項), 'convs' (graph convolution), 'lins' (全結合層).
         '''
         if self.num_epochs != 0:
             print('unable to set a scheduler while training.')
@@ -713,12 +713,6 @@ class Link_Prediction_Model():
     def train(self):
         '''
         link predictionのmodelを学習する
-
-        Parameter:
-            model (torch.nn.Module): 上記で定義したNN / GCN / GCNII のいずれか.
-            optimizer (torch.optim): optimizer.
-            data (torch_geometric.data.Data): グラフデータ.
-            mask (numpy.ndarray[num_nodes, num_nodes].flatten()): validation, testのpos_edge, neg_edgeとしてサンプリングしたリンクをFalse、それ以外をTrueとした隣接行列をflattenしたもの.            y_train
 
         Returns:
             loss (float): binary cross entropy
@@ -730,20 +724,26 @@ class Link_Prediction_Model():
         
         if self.negative_sampling_ratio is None:
             # 全ての負例を計算
-            self.optimizer.zero_grad()
+            for optimizer in self.optimizer.values():
+                optimizer.zero_grad()
 
             z = self.model.encode(self.data.x)
             link_probs = self.model.decode(z).flatten()
 
             loss = F.binary_cross_entropy(link_probs, self.y_train, weight = self.mask)
             loss.backward()
-            self.optimizer.step()
+            for optimizer in self.optimizer.values():
+                optimizer.step()
+
+            for scheduler in self.scheduler.values():
+                scheduler.step()
 
             return float(loss.cpu()), self.y_train_cpu, link_probs.cpu().detach().clone(), z.cpu().detach().clone()
 
         else:
             # negative samplingを行う
-            self.optimizer.zero_grad()
+            for optimizer in self.optimizer.values():
+                optimizer.zero_grad()
 
             neg_edge_index = negative_sampling(
                 edge_index = self.edge_index_for_negative_sampling,
@@ -759,7 +759,11 @@ class Link_Prediction_Model():
 
             loss = F.binary_cross_entropy(link_probs, link_labels, weight = weight)
             loss.backward()
-            self.optimizer.step()
+            for optimizer in self.optimizer.values():
+                optimizer.step()
+
+            for scheduler in self.scheduler.values():
+                scheduler.step()
 
             return float(loss.cpu()), link_labels.cpu(), link_probs.cpu().detach().clone(), z.cpu().detach().clone()
             
