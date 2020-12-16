@@ -397,7 +397,8 @@ class GCNII(torch.nn.Module):
         # 線形変換で次元削減して入力とする
         # x = F.dropout(self.data.x, self.dropout, training=self.training)
         z = self.lins[0](x)
-        x_0 = z.detach().clone()
+        # x_0 = z.detach().clone()
+        x_0 = z
 
         for i, conv in enumerate(self.convs):
             z = F.dropout(z, self.dropout, training = self.training)
@@ -635,6 +636,7 @@ class Link_Prediction_Model():
                 {'params':self.model.lins.parameters(),'weight_decay':0.01,'lr':0.005}
                 ])
 
+        self.scheduler = None
 
         self.num_hidden_channels = num_hidden_channels
         self.num_layers = self.model.num_layers
@@ -694,6 +696,19 @@ class Link_Prediction_Model():
             print('unable to change the optimizer while training.')
         else:
             self.optimizer = optimizer
+
+    def my_schedular(self, scheduler):
+        '''
+        schedulerを指定する.
+        trainを開始した後では、変更しない.
+
+        Parameters:
+            scheduler (torch.optim.lr_scheduler): scheduler.
+        '''
+        if self.num_epochs != 0:
+            print('unable to set a scheduler while training.')
+        else:
+            self.scheduler = scheduler
 
     def train(self):
         '''
