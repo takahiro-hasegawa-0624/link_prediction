@@ -24,6 +24,7 @@ import torch
 import torch.nn.functional as F
 from torch.nn import Linear
 
+from torch_sparse import SparseTensor
 import torch_geometric.transforms as T
 from torch_geometric.data import Data
 from torch_geometric.nn import GCNConv, GCN2Conv, global_mean_pool, JumpingKnowledge
@@ -224,7 +225,7 @@ class GCN(torch.nn.Module):
         self.train_pos_edge_adj_t = train_pos_edge_adj_t
 
         self.lins = torch.nn.ModuleList()
-        # self.lins.append(Linear(1, 1))
+        self.lins.append(Linear(1, 1))
         
         self.convs = torch.nn.ModuleList()
         if hidden_channels is None:
@@ -373,7 +374,8 @@ class GCNII(torch.nn.Module):
         self.hidden_channels_str = (f'{num_hidden_channels}_'*num_layers)[:-1]
 
         self.lins = torch.nn.ModuleList()
-        self.lins.append(Linear(data.x.size(1), num_hidden_channels))
+        # self.lins.append(Linear(data.x.size(1), num_hidden_channels))
+        self.lins.append(GCNConv(data.x.size(1), num_hidden_channels))
 
         self.convs = torch.nn.ModuleList()
         for layer in range(num_layers):
@@ -408,7 +410,8 @@ class GCNII(torch.nn.Module):
 
         # 線形変換で次元削減して入力とする
         # x = F.dropout(self.data.x, self.dropout, training=self.training)
-        z = self.lins[0](x)
+        z = self.lins[0](x, edge_index)
+        # z = self.lins[0](x)
         # x_0 = z.detach().clone()
         x_0 = z
 
@@ -510,7 +513,8 @@ class GCNIIwithJK(torch.nn.Module):
         self.hidden_channels_str = (f'{num_hidden_channels}_'*num_layers)[:-1]
 
         self.lins = torch.nn.ModuleList()
-        self.lins.append(Linear(data.x.size(1), num_hidden_channels))
+        # self.lins.append(Linear(data.x.size(1), num_hidden_channels))
+        self.lins.append(GCNConv(data.x.size(1), num_hidden_channels))
 
         self.convs = torch.nn.ModuleList()
         for layer in range(num_layers):
@@ -525,7 +529,7 @@ class GCNIIwithJK(torch.nn.Module):
             self.lins.append(Linear(4 * num_hidden_channels, num_hidden_channels))
 
         self.batchnorms = torch.nn.ModuleList()
-        for layer in range(num_layers - 1):
+        for layer in range(num_layers - 1 + (num_layers%4==0)):
             self.batchnorms.append(torch.nn.BatchNorm1d(num_hidden_channels))
 
         self.sigmoid_bias = sigmoid_bias
@@ -553,7 +557,8 @@ class GCNIIwithJK(torch.nn.Module):
 
         # 線形変換で次元削減して入力とする
         # x = F.dropout(self.data.x, self.dropout, training=self.training)
-        z = self.lins[0](x)
+        z = self.lins[0](x, edge_index)
+        # z = self.lins[0](x)
         # x_0 = z.detach().clone()
         x_0 = z
 
@@ -572,7 +577,7 @@ class GCNIIwithJK(torch.nn.Module):
                     z = torch.tanh(z)
 
             if i%4 == 3:
-                z = self.jumps[i//4](zs)
+                z = self.jumps[i//4](zs[4*(i//4):4*((i//4)+1)])
                 if self.jk_mode == 'cat':
                     z = self.lins[-1](z)
         return z
@@ -939,7 +944,22 @@ class Link_Prediction_Model():
             edge_index = torch.cat([self.data.train_pos_edge_index, neg_edge_index], dim = -1)
 
             if self.negative_injection is True:
-                z = self.model.encode(self.data.x, edge_index=edge_index)
+                (row, col), N, E = edge_index, self.data.num_nodes, edge_index.size(1)
+                perm = (col * N + row).argsort()
+                row, col = row[perm], col[perm]
+
+                value = None
+                for key in ['edge_weight', 'edge_attr', 'edge_type']:
+                    if self.data[key] is not None:
+                        value = self.data[key][perm]
+                        break
+
+                for key, item in self.data:
+                    if item.size(0) == E:
+                        self.data[key] = item[perm]
+
+                train_pos_edge_adj_t = SparseTensor(row=col, col=row, value=value, sparse_sizes=(N, N), is_sorted=True)
+                z = self.model.encode(self.data.x, edge_index=train_pos_edge_adj_t)
             else:
                 z = self.model.encode(self.data.x)
 
@@ -1287,6 +1307,7 @@ class Link_Prediction_Model():
                 'modelname', 
                 'activation', 
                 'sigmoid_bias', 
+                'negative_injection'
                 'bias_weight_decay', 
                 'bias_lr', 
                 'conv_weight_decay', 
@@ -1315,12 +1336,13 @@ class Link_Prediction_Model():
         log_dic['modelname'] = self.model.__class__.__name__
         log_dic['activation'] = self.activation
         log_dic['sigmoid_bias'] = self.sigmoid_bias
-        log_dic['bias_weight_decay'] = self.optimizer.param_groups[0]['weight_decay']
-        log_dic['bias_lr'] = self.optimizer.param_groups[0]['lr']
-        log_dic['conv_weight_decay'] = self.optimizer.param_groups[1]['weight_decay']
-        log_dic['conv_lr'] = self.optimizer.param_groups[1]['lr']
-        log_dic['lin_weight_decay'] = self.optimizer.param_groups[2]['weight_decay']
-        log_dic['lin_lr'] = self.optimizer.param_groups[2]['lr']
+        log_dic['negative_injection'] = self.negative_injection
+        log_dic['bias_weight_decay'] = self.optimizer['bias'].param_groups[0]['weight_decay']
+        log_dic['bias_lr'] = self.optimizer['bias'].param_groups[0]['lr']
+        log_dic['conv_weight_decay'] = self.optimizer['convs'].param_groups[0]['weight_decay']
+        log_dic['conv_lr'] = self.optimizer['convs'].param_groups[0]['lr']
+        log_dic['lin_weight_decay'] = self.optimizer['lins'].param_groups[0]['weight_decay']
+        log_dic['lin_lr'] = self.optimizer['lins'].param_groups[0]['lr']
         log_dic['num_layers'] = self.num_layers
         log_dic['hidden_channels'] = self.model.hidden_channels_str
         log_dic['negative_sampling_ratio'] = self.negative_sampling_ratio
