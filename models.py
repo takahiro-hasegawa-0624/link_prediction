@@ -7,6 +7,7 @@ Todo:
 """
 
 import os
+import shutil
 import datetime
 import cloudpickle
 
@@ -36,10 +37,11 @@ import my_utils
 
 class Bias(torch.nn.Module):
     '''Custom Layer
-    入力テンソルの全ての要素に一定のスカラーを加える
+    
+    Layer which add the same scalar to an input tensor
 
     Attributes:
-        bias (torch.nn.Parameter[1]): スカラー値のバイアス
+        bias (torch.nn.Parameter[1]): scalar bias
     '''
     def __init__(self):
         super(Bias, self).__init__()
@@ -50,33 +52,33 @@ class Bias(torch.nn.Module):
         return x
 
 class NN(torch.nn.Module):       
-    '''Neural Network
+    '''Fully Connected Layer
 
-    ノードの特徴量に対して全結合層のみを適用するモデル
+    Model which applies fully connected layers to node features
 
     Attributes:
         device (:obj:`int`): 'cpu', 'cuda'. 
-        lins (torch.nn.ModuleList): 全結合層のリスト.
-        convs (torch.nn.ModuleList): torch_geometric.nn.GCNConvのリスト.
-        bias (torch.nn.ModuleList): sigmoidのbias項をModuleList化.
-        batchnorms (torch.nn.ModuleList): batch normalizationのリスト.
-        activation (obj`int` or None): activation functionを指定。None, "relu", "leaky_relu", or "tanh". (Default: None)
-        sigmoid_bias (bool): If seto to True, sigmoid関数の入力にバイアス項が加わる (sigmoid(z^tz + b)。 (Default: False)
-        dropout (float): 各層のDropoutの割合.        
-        num_layers (int or None): 隠れ層の数.     
-        hidden_channels_str (str): 各層の出力の次元を文字列として記録
+        lins (torch.nn.ModuleList): list of fully connected layers.
+        convs (torch.nn.ModuleList): list of torch_geometric.nn.GCNConv (which is not used in NN class.)
+        bias (torch.nn.ModuleList): list of sigmoid bias.
+        batchnorms (torch.nn.ModuleList): list of batch normalization.
+        activation (obj`int` or None): activation function. None, "relu", "leaky_relu", or "tanh". (Default: None)
+        sigmoid_bias (bool): If seto to True, add a scalar bias to the sigmoid input tensor. (sigmoid(z^tz + b)。 (Default: False)
+        dropout (float): Dropout ratio.        
+        num_layers (int or None): the number of hidden layers.     
+        hidden_channels_str (str): the number of output channels of each layer.
     '''
     def __init__(self, data, num_hidden_channels = None, num_layers = None, hidden_channels = None, activation = None, self_loop_mask = True, dropout = 0.0, sigmoid_bias = False):
         '''
         Args:
-            data (torch_geometric.data.Data): グラフデータ.
-            num_hidden_channels (int or None): 隠れ層の出力次元数. 全ての層で同じ値が適用される. (Default: None)
-            num_layers (int or None): 隠れ層の数. (Default: None)
-            hidden_channels (list of int, or None): 各隠れ層の出力の次元. 指定するとnum_hidden_channels とnum_layersは無効化される. (Default: None)
-            activation (obj`int` or None): activation functionを指定。None, "relu", "leaky_relu", or "tanh". (Default: None)
-            self_loop_mask (bool): If seto to True, 特徴量の内積が必ず正となり、必ず存在確率が0.5以上となる自己ループを除外する。 (Default: False)
-            dropout (float): 各層のDropoutの割合. (Default: 0.0)
-            sigmoid_bias (bool): If seto to True, sigmoid関数の入力にバイアス項が加わる (sigmoid(z^tz + b)。 (Default: False)
+            data (torch_geometric.data.Data): graph data.
+            num_hidden_channels (int or None): the number of output channels. If set to int, the same number of output channels is applied to all the layers . (Default: None)
+            num_layers (int or None): the number of hidden layers. (Default: None)
+            hidden_channels (list of int, or None): list of the number of output channels of each layer. If set, num_hidden_channels and num_layers are invalud. (Default: None)
+            activation (obj`int` or None): activation function. None, "relu", "leaky_relu", or "tanh". (Default: None)
+            self_loop_mask (bool): If seto to True, mask self loops in the graph when calculating the loss. (Default: False)
+            dropout (float): Dropout ratio.        
+            sigmoid_bias (bool): If seto to True, add a scalar bias to the sigmoid input tensor. (sigmoid(z^tz + b)。 (Default: False)
         '''
         super(NN, self).__init__()
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -129,7 +131,7 @@ class NN(torch.nn.Module):
         ノードの特徴量をモデルに入力し、モデルからの出力を得る.
 
         Parameters:
-            x (torch.tensor[num_nodes, input_channels]): モデルの入力.
+            x (torch.tensor[num_nodes, input_channels]): input node features.
             edge_index (None): グラフのリンクの端点のインデックス. NN classではgraph cnvolutionをしないためNone.
 
         Returns:
@@ -155,10 +157,10 @@ class NN(torch.nn.Module):
         モデルの出力から、全てのノードの組におけるリンク存在確率を出力する.
 
         Parameters:
-            z (torch.tensor[num_nodes, output_channels]): モデルの出力.
+            z (torch.tensor[num_nodes, output_channels]): model output.
 
         Returns:
-            probs (torch.tensor[num_edges, num_edges]: リンクの存在確率の隣接行列.
+            probs (torch.tensor[num_edges, num_edges]: adjacency matrix of link existence probabilites.
         '''
         if self.sigmoid_bias is True:
             if self.self_loop_mask is True:
@@ -358,7 +360,7 @@ class GCNII(torch.nn.Module):
             train_pos_edge_adj_t (torch.SparseTensor[2, num_pos_edges]): trainデータのリンク.
             num_hidden_channels (int or None): 隠れ層の出力次元数. 全ての層で同じ値が適用される.
             num_layers (int or None): 隠れ層の数.
-            alpha (float): .
+            alpha (float): convolution後に初期層を加える割合. (Default: 0.1)
             theta (float): .
             shared_weights (bool): . (Default: True)
             activation (obj`int` or None): activation functionを指定。None, "relu", "leaky_relu", or "tanh". (Default: None)
@@ -478,7 +480,7 @@ class GCNIIwithJK(torch.nn.Module):
         device (:obj:`int`): 'cpu', 'cuda'. 
         lins (torch.nn.ModuleList): 全結合層のリスト.
         convs (torch.nn.ModuleList): torch_geometric.nn.GCNConvのリスト.
-        jk_mode (:obj:`str`): aggregation方法. ('cat', 'max' or 'lstm'). (Default: 'cat)
+        jk_mode (:obj:`str`): JK-Netにおけるaggregation方法. ('cat', 'max' or 'lstm'). (Default: 'cat)
         bias (torch.nn.ModuleList): sigmoidのbias項をModuleList化.
         batchnorms (torch.nn.ModuleList): batch normalizationのリスト.
         activation (:obj:`int` or None): activation functionを指定。None, "relu", "leaky_relu", or "tanh". (Default: None)
@@ -496,8 +498,8 @@ class GCNIIwithJK(torch.nn.Module):
             train_pos_edge_adj_t (torch.SparseTensor[2, num_pos_edges]): trainデータのリンク.
             num_hidden_channels (int or None): 隠れ層の出力次元数. 全ての層で同じ値が適用される.
             num_layers (int or None): 隠れ層の数.
-            jk_mode (:obj:`str`): aggregation方法. ('cat', 'max' or 'lstm'). (Default: 'cat)
-            alpha (float): .
+            jk_mode (:obj:`str`): JK-Netにおけるaggregation方法. ('cat', 'max' or 'lstm'). (Default: 'cat)
+            alpha (float): convolution後に初期層を加える割合. (Default: 0.1)
             theta (float): .
             shared_weights (bool): . (Default: True)
             activation (obj`int` or None): activation functionを指定。None, "relu", "leaky_relu", or "tanh". (Default: None)
@@ -507,6 +509,7 @@ class GCNIIwithJK(torch.nn.Module):
         '''
         super(GCNIIwithJK, self).__init__()
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        # self.device = 'cpu'
 
         self.num_layers = num_layers
         self.train_pos_edge_adj_t = train_pos_edge_adj_t
@@ -578,8 +581,12 @@ class GCNIIwithJK(torch.nn.Module):
 
             if i%4 == 3:
                 z = self.jumps[i//4](zs[4*(i//4):4*((i//4)+1)])
+                # z = self.jumps[i//4](zs)
+                # zs = []
+                x_0 = z
                 if self.jk_mode == 'cat':
                     z = self.lins[-1](z)
+                    x_0 = z
         return z
 
     def decode(self, z):
@@ -693,6 +700,7 @@ class Link_Prediction_Model():
         torch.cuda.manual_seed(seed)
 
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        # self.device = 'cpu'
         self.dataset_name = dataset_name
 
         if data is None:
@@ -739,7 +747,7 @@ class Link_Prediction_Model():
             num_layers (int or None): 隠れ層の数.
             hidden_channels (list of int, or None): 各隠れ層の出力の配列. 指定するとnum_hidden_channels とnum_layersは無効化される. (Default: None)
             negative_injection (bool): If set to to True, negative samplingされたedgeをconvolutionに含める.
-            jk_mode (:obj:`str`): aggregation方法. ('cat', 'max' or 'lstm'). (Default: 'cat)
+            jk_mode (:obj:`str`): JK-Netにおけるaggregation方法. ('cat', 'max' or 'lstm'). (Default: 'cat)
             alpha (float): convolution後に初期層を加える割合. (Default: 0.1)
             theta (float): .
             shared_weights (bool): . (Default: True)
@@ -826,6 +834,9 @@ class Link_Prediction_Model():
 
         # learning rate のscheduler はself.my_schedulerで指定可能。
         self.scheduler = {}
+        self.scheduler['bias'] = None
+        self.scheduler['convs'] = None
+        self.scheduler['lins'] = None
 
         self.num_hidden_channels = num_hidden_channels
         self.num_layers = self.model.num_layers
@@ -871,6 +882,7 @@ class Link_Prediction_Model():
         print(f'num_layers: {self.num_layers}')
         print(f'activation: {self.activation}')
         print(f'sigmoid_bias: {self.sigmoid_bias}')
+        print(f'negative_injection: {self.negative_injection}')
         print(f'negative_sampling_ratio: {self.negative_sampling_ratio}')
         print('ready to train!\n')
 
@@ -886,9 +898,10 @@ class Link_Prediction_Model():
         if self.num_epochs != 0:
             print('unable to change the optimizer while training.')
         else:
-            self.optimizer = optimizer
+            for key, value in optimizer.items():
+                self.optimizer[key] = value
 
-    def my_schedular(self, scheduler):
+    def my_scheduler(self, scheduler):
         '''
         schedulerを指定する.
         trainを開始した後では、変更しない.
@@ -899,7 +912,8 @@ class Link_Prediction_Model():
         if self.num_epochs != 0:
             print('unable to set a scheduler while training.')
         else:
-            self.scheduler = scheduler
+            for key, value in scheduler.items():
+                self.scheduler[key] = value
 
     def train(self):
         '''
@@ -920,6 +934,9 @@ class Link_Prediction_Model():
 
             z = self.model.encode(self.data.x)
             link_probs = self.model.decode(z).flatten()
+            if torch.isnan(link_probs).sum()>0:
+                print('np.nan occurred')
+                link_probs[torch.isnan(link_probs)]=1.0
 
             loss = F.binary_cross_entropy(link_probs, self.y_train, weight = self.mask)
             loss.backward()
@@ -964,6 +981,9 @@ class Link_Prediction_Model():
                 z = self.model.encode(self.data.x)
 
             link_probs = self.model.decode(z)[edge_index.cpu().numpy()]
+            if torch.isnan(link_probs).sum()>0:
+                print('np.nan occurred')
+                link_probs[torch.isnan(link_probs)]=1.0
 
             link_labels = my_utils.get_link_labels(self.data.train_pos_edge_index, neg_edge_index).to(self.device)
             weight = my_utils.get_loss_weight(self.data.train_pos_edge_index, neg_edge_index, self.negative_sampling_ratio).to(self.device)
@@ -971,10 +991,12 @@ class Link_Prediction_Model():
             loss = F.binary_cross_entropy(link_probs, link_labels, weight = weight)
             loss.backward()
             for optimizer in self.optimizer.values():
-                optimizer.step()
+                if optimizer is not None:
+                    optimizer.step()
 
             for scheduler in self.scheduler.values():
-                scheduler.step()
+                if scheduler is not None:
+                    scheduler.step()
 
             return float(loss.cpu()), link_labels.cpu(), link_probs.cpu().detach().clone(), z.cpu().detach().clone()
             
@@ -999,6 +1021,9 @@ class Link_Prediction_Model():
             return None, None, None
 
         link_probs = self.model.encode_decode(self.data.x)[edge_index.cpu().numpy()]
+        if torch.isnan(link_probs).sum()>0:
+            print('np.nan occurred')
+            link_probs[torch.isnan(link_probs)]=1.0
         link_labels = my_utils.get_link_labels(pos_edge_index, neg_edge_index).to(self.device)
         loss = F.binary_cross_entropy(link_probs, link_labels)
         
@@ -1022,6 +1047,9 @@ class Link_Prediction_Model():
         edge_index = torch.cat([pos_edge_index, neg_edge_index], dim = -1)
 
         link_probs = self.model.encode_decode(self.data.x)[edge_index.cpu().numpy()]
+        if torch.isnan(link_probs).sum()>0:
+            print('np.nan occurred')
+            link_probs[torch.isnan(link_probs)]=1.0
         link_labels = my_utils.get_link_labels(pos_edge_index, neg_edge_index).to(self.device)
         loss = F.binary_cross_entropy(link_probs, link_labels)
         
@@ -1040,11 +1068,11 @@ class Link_Prediction_Model():
 
         self.start_time = datetime.datetime.now()
 
-        self.path_best_model = f"./output/{self.dataset_name}/{self.model.__class__.__name__}/activation_{self.activation}/sigmoidbias_{'True' if self.sigmoid_bias is True else 'False'}/numlayers_{self.num_layers}/layeroutputs_{self.model.hidden_channels_str}/negative_sampling_ratio_{self.negative_sampling_ratio}/epochs_{self.num_epochs}/{self.start_time.strftime('%Y%m%d_%H%M')}/usebestmodel_True"
+        self.path_best_model = f"./output/{self.dataset_name}/{self.model.__class__.__name__}/activation_{self.activation}/sigmoidbias_{'True' if self.sigmoid_bias is True else 'False'}/numlayers_{self.num_layers}/negative_sampling_ratio_{self.negative_sampling_ratio}/epochs_{self.num_epochs}/{self.start_time.strftime('%Y%m%d_%H%M')}/usebestmodel_True"
         if not os.path.isdir(self.path_best_model):
             os.makedirs(self.path_best_model)
 
-        self.path_last_model = f"./output/{self.dataset_name}/{self.model.__class__.__name__}/activation_{self.activation}/sigmoidbias_{'True' if self.sigmoid_bias is True else 'False'}/numlayers_{self.num_layers}/layeroutputs_{self.model.hidden_channels_str}/negative_sampling_ratio_{self.negative_sampling_ratio}/epochs_{self.num_epochs}/{self.start_time.strftime('%Y%m%d_%H%M')}/usebestmodel_False"
+        self.path_last_model = f"./output/{self.dataset_name}/{self.model.__class__.__name__}/activation_{self.activation}/sigmoidbias_{'True' if self.sigmoid_bias is True else 'False'}/numlayers_{self.num_layers}/negative_sampling_ratio_{self.negative_sampling_ratio}/epochs_{self.num_epochs}/{self.start_time.strftime('%Y%m%d_%H%M')}/usebestmodel_False"
         if not os.path.isdir(self.path_last_model):
             os.makedirs(self.path_last_model)
 
@@ -1095,8 +1123,8 @@ class Link_Prediction_Model():
             if print_log is True:
                 print(log, end='')
 
-        with open(f"{self.path_last_model}/model.pkl", 'wb') as f:
-            cloudpickle.dump(self.model, f)
+        # with open(f"{self.path_last_model}/model.pkl", 'wb') as f:
+        #     cloudpickle.dump(self.model, f)
         
         with open(f"{self.path_best_model}/best_model.pkl", 'rb') as f:
             self.best_model = cloudpickle.load(f)
@@ -1296,6 +1324,11 @@ class Link_Prediction_Model():
             with open(path+'/log.txt', mode='w') as f:
                 f.write(text)
 
+        if save is False:
+            # delete directories to save outputs
+            shutil.rmtree(self.path_best_model)
+            shutil.rmtree(self.path_last_model)
+
         # 結果集約csvの作成
         path_csv = './output/summary.csv'
         if os.path.isfile(path_csv):
@@ -1307,13 +1340,19 @@ class Link_Prediction_Model():
                 'modelname', 
                 'activation', 
                 'sigmoid_bias', 
-                'negative_injection'
+                'negative_injection', 
                 'bias_weight_decay', 
                 'bias_lr', 
-                'conv_weight_decay', 
-                'conv_lr', 
-                'lin_weight_decay', 
-                'lin_lr', 
+                'bias_lr_scheduler', 
+                'bias_lr_scheduler_gamma', 
+                'convs_weight_decay', 
+                'convs_lr', 
+                'convs_lr_scheduler', 
+                'convs_lr_scheduler_gamma',
+                'lins_weight_decay', 
+                'lins_lr', 
+                'lins_lr_scheduler', 
+                'lins_lr_scheduler_gamma',
                 'num_layers', 
                 'hidden_channels', 
                 'negative_sampling_ratio', 
@@ -1337,12 +1376,37 @@ class Link_Prediction_Model():
         log_dic['activation'] = self.activation
         log_dic['sigmoid_bias'] = self.sigmoid_bias
         log_dic['negative_injection'] = self.negative_injection
+
         log_dic['bias_weight_decay'] = self.optimizer['bias'].param_groups[0]['weight_decay']
         log_dic['bias_lr'] = self.optimizer['bias'].param_groups[0]['lr']
-        log_dic['conv_weight_decay'] = self.optimizer['convs'].param_groups[0]['weight_decay']
-        log_dic['conv_lr'] = self.optimizer['convs'].param_groups[0]['lr']
-        log_dic['lin_weight_decay'] = self.optimizer['lins'].param_groups[0]['weight_decay']
-        log_dic['lin_lr'] = self.optimizer['lins'].param_groups[0]['lr']
+        if self.scheduler['bias'] is None:
+            log_dic['bias_lr_scheduler'] = None
+            log_dic['bias_lr_scheduler_gamma'] = None
+        else:
+            log_dic['bias_lr_scheduler'] = self.scheduler['bias'].__class__.__name__
+            log_dic['bias_lr_scheduler_gamma'] = self.scheduler['bias'].gamma
+            log_dic['bias_lr'] = self.scheduler['bias'].base_lrs[0]
+
+        log_dic['convs_weight_decay'] = self.optimizer['convs'].param_groups[0]['weight_decay']
+        log_dic['convs_lr'] = self.optimizer['convs'].param_groups[0]['lr']
+        if self.scheduler['convs'] is None:
+            log_dic['convs_lr_scheduler'] = None
+            log_dic['convs_lr_scheduler_gamma'] = None
+        else:
+            log_dic['convs_lr_scheduler'] = self.scheduler['convs'].__class__.__name__
+            log_dic['convs_lr_scheduler_gamma'] = self.scheduler['convs'].gamma
+            log_dic['convs_lr'] = self.scheduler['convs'].base_lrs[0]
+
+        log_dic['lins_weight_decay'] = self.optimizer['lins'].param_groups[0]['weight_decay']
+        log_dic['lins_lr'] = self.optimizer['lins'].param_groups[0]['lr']
+        if self.scheduler['lins'] is None:
+            log_dic['lins_lr_scheduler'] = None
+            log_dic['lins_lr_scheduler_gamma'] = None
+        else:
+            log_dic['lins_lr_scheduler'] = self.scheduler['lins'].__class__.__name__
+            log_dic['lins_lr_scheduler_gamma'] = self.scheduler['lins'].gamma
+            log_dic['lins_lr'] = self.scheduler['lins'].base_lrs[0]
+
         log_dic['num_layers'] = self.num_layers
         log_dic['hidden_channels'] = self.model.hidden_channels_str
         log_dic['negative_sampling_ratio'] = self.negative_sampling_ratio
