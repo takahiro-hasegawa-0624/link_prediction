@@ -29,6 +29,7 @@ import models
 
 # choice CPU or GPU
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+# device = 'cpu'
 
 # fix random variable
 seed = 42
