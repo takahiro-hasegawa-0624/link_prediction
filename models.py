@@ -4,8 +4,7 @@ graph neural networks for link prediction
     link preiction モデルのclassを定義する
 
 Todo:
-    VGAEを実装
-    大野さんのモデルを実装する
+
 """
 
 import os
@@ -68,10 +67,11 @@ class NN(torch.nn.Module):
         num_layers (int or None): the number of hidden layers.     
         hidden_channels_str (str): the number of output channels of each layer.
     '''
-    def __init__(self, data, num_hidden_channels = None, num_layers = None, hidden_channels = None, activation = None, dropout = 0.0):
+    def __init__(self, data, decode_modelname, num_hidden_channels = None, num_layers = None, hidden_channels = None, activation = None, dropout = 0.0):
         '''
         Args:
             data (torch_geometric.data.Data): graph data.
+            decode_modelname
             num_hidden_channels (int or None): the number of output channels. If set to int, the same number of output channels is applied to all the layers . (Default: None)
             num_layers (int or None): the number of hidden layers. (Default: None)
             hidden_channels (list of int, or None): list of the number of output channels of each layer. If set, num_hidden_channels and num_layers are invalud. (Default: None)
@@ -80,11 +80,14 @@ class NN(torch.nn.Module):
         '''
         super(NN, self).__init__()
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.decode_modelname = decode_modelname
 
         self.lins = torch.nn.ModuleList()
 
         self.convs = torch.nn.ModuleList()
-        # self.convs.append(Linear(1, 1))
+        self.convs.append(Linear(1, 1))
+
+        self.batchnorms = torch.nn.ModuleList()
 
         if hidden_channels is None:
             self.hidden_channels_str = (f'{num_hidden_channels}_'*num_layers)[:-1]
@@ -95,9 +98,11 @@ class NN(torch.nn.Module):
             for _ in range(num_layers - 1):
                 self.lins.append(Linear(num_hidden_channels, num_hidden_channels))
 
-            self.batchnorms = torch.nn.ModuleList()
             for _ in range(num_layers - 1):
                 self.batchnorms.append(torch.nn.BatchNorm1d(num_hidden_channels))
+
+            if self.decode_modelname == 'VGAE':
+                self.lins.append(Linear(num_hidden_channels, num_hidden_channels))
                 
         else:
             self.hidden_channels_str = ''
@@ -111,29 +116,29 @@ class NN(torch.nn.Module):
             for i in range(len(hidden_channels) - 1):
                 self.lins.append(Linear(hidden_channels[i], hidden_channels[i+1]))
 
-            self.batchnorms = torch.nn.ModuleList()
             for i in range(len(hidden_channels) - 1):
                 self.batchnorms.append(torch.nn.BatchNorm1d(hidden_channels[i]))
+
+            if self.decode_modelname == 'VGAE':
+                self.lins.append(Linear(hidden_channels[-2], hidden_channels[-1]))
 
         self.activation = activation
         self.dropout = dropout
 
     def forward(self, x, edge_inde = None):
         '''
-        ノードの特徴量をモデルに入力し、モデルからの出力を得る.
-
         Parameters:
-            x (torch.tensor[num_nodes, input_channels]): input node features.
-            edge_index (None): グラフのリンクの端点のインデックス. NN classではgraph cnvolutionをしないためNone.
+            x (torch.tensor[num_nodes, input_channels]): input of the model (node features).
+            edge_index (torch.tensor[2, num_edges]): tonsor of the pair of node indexes with edges.
 
         Returns:
-            z (torch.tensor[num_nodes, output_channels]): モデルの出力.
+            z (torch.tensor[num_nodes, output_channels]): node-wise latent features.
         '''
         z = x
-        for i, lin in enumerate(self.lins):
-            z = F.dropout(z, self.dropout, training = self.training)
-            z = lin(z)
-            if i < len(self.lins) - 1:
+        if self.decode_modelname == 'VGAE':
+            for i, lin in enumerate(self.lins[:-2]):
+                z = F.dropout(z, self.dropout, training = self.training)
+                z = lin(z)
                 z = self.batchnorms[i](z)
                 if self.activation == "relu":
                     z = z.relu()
@@ -142,7 +147,22 @@ class NN(torch.nn.Module):
                 elif self.activation == "tanh":
                     z = torch.tanh(z)
 
-        return z
+            return self.lins[-2](z), self.lins[-1](z)
+
+        else:
+            for i, lin in enumerate(self.lins):
+                z = F.dropout(z, self.dropout, training = self.training)
+                z = lin(z)
+                if i < len(self.lins) - 1:
+                    z = self.batchnorms[i](z)
+                    if self.activation == "relu":
+                        z = z.relu()
+                    elif self.activation == "leaky_relu":
+                        z = F.leaky_relu(z, negative_slope=0.01)
+                    elif self.activation == "tanh":
+                        z = torch.tanh(z)
+
+            return z
 
 class GCN(torch.nn.Module):  
     '''Vanilla Graph Neural Network
@@ -160,10 +180,11 @@ class GCN(torch.nn.Module):
         hidden_channels_str (str): 各層の出力の次元を文字列として記録.
         train_pos_edge_adj_t (torch.SparseTensor[2, num_pos_edges]): trainデータのリンク.
     '''     
-    def __init__(self, data, train_pos_edge_adj_t, num_hidden_channels = None, num_layers = None, hidden_channels = None, activation = None, dropout = 0.0):
+    def __init__(self, data, decode_modelname, train_pos_edge_adj_t, num_hidden_channels = None, num_layers = None, hidden_channels = None, activation = None, dropout = 0.0):
         '''
         Args:
             data (torch_geometric.data.Data): グラフデータ.
+            decode_modelname
             train_pos_edge_adj_t (torch.SparseTensor[2, num_pos_edges]): trainデータのリンク.
             num_hidden_channels (int or None): 隠れ層の出力次元数. 全ての層で同じ値が適用される. (Default: None)
             num_layers (int or None): 隠れ層の数. (Default: None)
@@ -173,6 +194,7 @@ class GCN(torch.nn.Module):
         '''
         super(GCN, self).__init__()
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.decode_modelname = decode_modelname
 
         self.train_pos_edge_adj_t = train_pos_edge_adj_t
 
@@ -180,6 +202,9 @@ class GCN(torch.nn.Module):
         self.lins.append(Linear(1, 1))
         
         self.convs = torch.nn.ModuleList()
+
+        self.batchnorms = torch.nn.ModuleList()
+
         if hidden_channels is None:
             self.hidden_channels_str = (f'{num_hidden_channels}_'*num_layers)[:-1]
 
@@ -188,10 +213,12 @@ class GCN(torch.nn.Module):
             for _ in range(num_layers - 1):
                 self.convs.append(GCNConv(num_hidden_channels, num_hidden_channels))
 
-            self.batchnorms = torch.nn.ModuleList()
             for _ in range(num_layers - 1):
                 self.batchnorms.append(torch.nn.BatchNorm1d(num_hidden_channels))
-                
+
+            if self.decode_modelname == 'VGAE':
+                self.convs.append(GCNConv(num_hidden_channels, num_hidden_channels))
+
         else:            
             self.hidden_channels_str = ''
             for num in hidden_channels:
@@ -203,32 +230,32 @@ class GCN(torch.nn.Module):
             for i in range(len(hidden_channels) - 1):
                 self.convs.append(GCNConv(hidden_channels[i], hidden_channels[i+1]))
 
-            self.batchnorms = torch.nn.ModuleList()
             for i in range(len(hidden_channels) - 1):
                 self.batchnorms.append(torch.nn.BatchNorm1d(hidden_channels[i]))
-        
+
+            if self.decode_modelname == 'VGAE':
+                self.convs.append(GCNConv(hidden_channels[-2], hidden_channels[-1]))
+
         self.activation = activation
         self.dropout = dropout
 
     def forward(self, x, edge_index=None):
         '''
-        ノードの特徴量をモデルに入力し、モデルからの出力を得る.
-
         Parameters:
-            x (torch.tensor[num_nodes, input_channels]): モデルの入力.
-            edge_index (torch.tensor[2, num_edges]): グラフのリンクの端点のインデックス.
+            x (torch.tensor[num_nodes, input_channels]): input of the model (node features).
+            edge_index (torch.tensor[2, num_edges]): tonsor of the pair of node indexes with edges.
 
         Returns:
-            z (torch.tensor[num_nodes, output_channels]): モデルの出力.
+            z (torch.tensor[num_nodes, output_channels]): node-wise latent features.
         '''
         if edge_index is None:
             edge_index = self.train_pos_edge_adj_t
 
         z = x
-        for i, conv in enumerate(self.convs):
-            z = F.dropout(z, self.dropout, training = self.training)
-            z = conv(z, edge_index)
-            if i < len(self.convs) - 1:
+        if self.decode_modelname == 'VGAE':
+            for i, conv in enumerate(self.convs[:-2]):
+                z = F.dropout(z, self.dropout, training = self.training)
+                z = conv(z, edge_index)
                 z = self.batchnorms[i](z)
                 if self.activation == "relu":
                     z = z.relu()
@@ -237,7 +264,22 @@ class GCN(torch.nn.Module):
                 elif self.activation == "tanh":
                     z = torch.tanh(z)
 
-        return z
+            return self.convs[-2](z, edge_index), self.convs[-1](z, edge_index)
+
+        else:
+            for i, conv in enumerate(self.convs):
+                z = F.dropout(z, self.dropout, training = self.training)
+                z = conv(z, edge_index)
+                if i < len(self.convs) - 1:
+                    z = self.batchnorms[i](z)
+                    if self.activation == "relu":
+                        z = z.relu()
+                    elif self.activation == "leaky_relu":
+                        z = F.leaky_relu(z, negative_slope=0.01)
+                    elif self.activation == "tanh":
+                        z = torch.tanh(z)
+
+            return z
 
 class GCNII(torch.nn.Module):       
     '''GCNII
@@ -256,10 +298,11 @@ class GCNII(torch.nn.Module):
         train_pos_edge_adj_t (torch.SparseTensor[2, num_pos_edges]): trainデータのリンク.
     '''    
 
-    def __init__(self, data, train_pos_edge_adj_t, num_hidden_channels, num_layers, alpha=0.1, theta=0.5, shared_weights = True, activation = None, dropout = 0.0):
+    def __init__(self, data, decode_modelname, train_pos_edge_adj_t, num_hidden_channels, num_layers, alpha=0.1, theta=0.5, shared_weights = True, activation = None, dropout = 0.0):
         '''
         Args:
             data (torch_geometric.data.Data): グラフデータ.
+            decode_modelname
             train_pos_edge_adj_t (torch.SparseTensor[2, num_pos_edges]): trainデータのリンク.
             num_hidden_channels (int or None): 隠れ層の出力次元数. 全ての層で同じ値が適用される.
             num_layers (int or None): 隠れ層の数.
@@ -271,17 +314,20 @@ class GCNII(torch.nn.Module):
         '''
         super(GCNII, self).__init__()
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.decode_modelname = decode_modelname
 
         self.num_layers = num_layers
         self.train_pos_edge_adj_t = train_pos_edge_adj_t
         self.hidden_channels_str = (f'{num_hidden_channels}_'*num_layers)[:-1]
 
         self.lins = torch.nn.ModuleList()
-        # self.lins.append(Linear(data.x.size(1), num_hidden_channels))
         self.lins.append(GCNConv(data.x.size(1), num_hidden_channels))
 
         self.convs = torch.nn.ModuleList()
         for layer in range(num_layers):
+            self.convs.append(GCN2Conv(num_hidden_channels, alpha, theta, layer+1, shared_weights = shared_weights, normalize = False))
+
+        if self.decode_modelname == 'VGAE':
             self.convs.append(GCN2Conv(num_hidden_channels, alpha, theta, layer+1, shared_weights = shared_weights, normalize = False))
 
         self.batchnorms = torch.nn.ModuleList()
@@ -293,29 +339,25 @@ class GCNII(torch.nn.Module):
 
     def forward(self, x, edge_index=None):
         '''
-        ノードの特徴量をモデルに入力し、モデルからの出力を得る.
-
         Parameters:
-            x (torch.tensor[num_nodes, input_channels]): モデルの入力.
-            edge_index (torch.tensor[2, num_edges]): グラフのリンクの端点のインデックス.
+            x (torch.tensor[num_nodes, input_channels]): input of the model (node features).
+            edge_index (torch.tensor[2, num_edges]): tonsor of the pair of node indexes with edges.
 
         Returns:
-            z (torch.tensor[num_nodes, output_channels]): モデルの出力.
+            z (torch.tensor[num_nodes, output_channels]): node-wise latent features.
         '''
         if edge_index is None:
             edge_index = self.train_pos_edge_adj_t
 
         # 線形変換で次元削減して入力とする
-        # x = F.dropout(self.data.x, self.dropout, training=self.training)
         z = self.lins[0](x, edge_index)
-        # z = self.lins[0](x)
-        # x_0 = z.detach().clone()
+
         x_0 = z
 
-        for i, conv in enumerate(self.convs):
-            z = F.dropout(z, self.dropout, training = self.training)
-            z = conv(z, x_0, edge_index)
-            if i < len(self.convs) - 1:
+        if self.decode_modelname == 'VGAE':
+            for i, conv in enumerate(self.convs[:-2]):
+                z = F.dropout(z, self.dropout, training = self.training)
+                z = conv(z, x_0, edge_index)
                 z = self.batchnorms[i](z)
                 if self.activation == "relu":
                     z = z.relu()
@@ -324,7 +366,22 @@ class GCNII(torch.nn.Module):
                 elif self.activation == "tanh":
                     z = torch.tanh(z)
 
-        return z
+            return self.convs[-2](z, x_0, edge_index), self.convs[-1](z, x_0, edge_index)
+
+        else:
+            for i, conv in enumerate(self.convs):
+                z = F.dropout(z, self.dropout, training = self.training)
+                z = conv(z, x_0, edge_index)
+                if i < len(self.convs) - 1:
+                    z = self.batchnorms[i](z)
+                    if self.activation == "relu":
+                        z = z.relu()
+                    elif self.activation == "leaky_relu":
+                        z = F.leaky_relu(z, negative_slope=0.01)
+                    elif self.activation == "tanh":
+                        z = torch.tanh(z)
+
+            return z
 
 
 class GCNIIwithJK(torch.nn.Module):       
@@ -345,10 +402,11 @@ class GCNIIwithJK(torch.nn.Module):
         train_pos_edge_adj_t (torch.SparseTensor[2, num_pos_edges]): trainデータのリンク.
     '''    
 
-    def __init__(self, data, train_pos_edge_adj_t, num_hidden_channels, num_layers, jk_mode='cat', alpha=0.1, theta=0.5, shared_weights = True, activation = None, dropout = 0.0):
+    def __init__(self, data, decode_modelname, train_pos_edge_adj_t, num_hidden_channels, num_layers, jk_mode='cat', alpha=0.1, theta=0.5, shared_weights = True, activation = None, dropout = 0.0):
         '''
         Args:
             data (torch_geometric.data.Data): グラフデータ.
+            decode_modelname
             train_pos_edge_adj_t (torch.SparseTensor[2, num_pos_edges]): trainデータのリンク.
             num_hidden_channels (int or None): 隠れ層の出力次元数. 全ての層で同じ値が適用される.
             num_layers (int or None): 隠れ層の数.
@@ -361,7 +419,7 @@ class GCNIIwithJK(torch.nn.Module):
         '''
         super(GCNIIwithJK, self).__init__()
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        # self.device = 'cpu'
+        self.decode_modelname = decode_modelname
 
         self.num_layers = num_layers
         self.train_pos_edge_adj_t = train_pos_edge_adj_t
@@ -373,6 +431,9 @@ class GCNIIwithJK(torch.nn.Module):
 
         self.convs = torch.nn.ModuleList()
         for layer in range(num_layers):
+            self.convs.append(GCN2Conv(num_hidden_channels, alpha, theta, layer+1, shared_weights = shared_weights, normalize = False))
+
+        if self.decode_modelname == 'VGAE':
             self.convs.append(GCN2Conv(num_hidden_channels, alpha, theta, layer+1, shared_weights = shared_weights, normalize = False))
 
         self.jk_mode = jk_mode
@@ -392,14 +453,12 @@ class GCNIIwithJK(torch.nn.Module):
 
     def forward(self, x, edge_index=None):
         '''
-        ノードの特徴量をモデルに入力し、モデルからの出力を得る.
-
         Parameters:
-            x (torch.tensor[num_nodes, input_channels]): モデルの入力.
-            edge_index (torch.tensor[2, num_edges]): グラフのリンクの端点のインデックス.
+            x (torch.tensor[num_nodes, input_channels]): input of the model (node features).
+            edge_index (torch.tensor[2, num_edges]): tonsor of the pair of node indexes with edges.
 
         Returns:
-            z (torch.tensor[num_nodes, output_channels]): モデルの出力.
+            z (torch.tensor[num_nodes, output_channels]): node-wise latent features.
         '''
         if edge_index is None:
             edge_index = self.train_pos_edge_adj_t
@@ -407,50 +466,77 @@ class GCNIIwithJK(torch.nn.Module):
         # 線形変換で次元削減して入力とする
         # x = F.dropout(self.data.x, self.dropout, training=self.training)
         z = self.lins[0](x, edge_index)
-        # z = self.lins[0](x)
-        # x_0 = z.detach().clone()
+
         x_0 = z
 
-        zs = []
-        for i, conv in enumerate(self.convs):
-            z = F.dropout(z, self.dropout, training = self.training)
-            z = conv(z, x_0, edge_index)
-            zs += [z]
-            if (i < len(self.convs) - 1) or (i%4==3):
-                z = self.batchnorms[i](z)
-                if self.activation == "relu":
-                    z = z.relu()
-                elif self.activation == "leaky_relu":
-                    z = F.leaky_relu(z, negative_slope=0.01)
-                elif self.activation == "tanh":
-                    z = torch.tanh(z)
+        if self.decode_modelname == 'VGAE':
+            zs = []
+            for i, conv in enumerate(self.convs[:-2]):
+                z = F.dropout(z, self.dropout, training = self.training)
+                z = conv(z, x_0, edge_index)
+                zs += [z]
+                if (i < len(self.convs[:-2])) or (i%4==3):
+                    z = self.batchnorms[i](z)
+                    if self.activation == "relu":
+                        z = z.relu()
+                    elif self.activation == "leaky_relu":
+                        z = F.leaky_relu(z, negative_slope=0.01)
+                    elif self.activation == "tanh":
+                        z = torch.tanh(z)
 
-            if i%4 == 3:
-                z = self.jumps[i//4](zs[4*(i//4):4*((i//4)+1)])
-                # z = self.jumps[i//4](zs)
-                # zs = []
-                x_0 = z
-                if self.jk_mode == 'cat':
-                    z = self.lins[-1](z)
+                if i%4 == 3:
+                    z = self.jumps[i//4](zs[4*(i//4):4*((i//4)+1)])
+                    # z = self.jumps[i//4](zs)
+                    # zs = []
                     x_0 = z
-        return z
+                    if self.jk_mode == 'cat':
+                        z = self.lins[-1](z)
+                        x_0 = z
+            return self.convs[-2](z, x_0, edge_index), self.convs[-1](z, x_0, edge_index)
+
+        else:
+            zs = []
+            for i, conv in enumerate(self.convs):
+                z = F.dropout(z, self.dropout, training = self.training)
+                z = conv(z, x_0, edge_index)
+                zs += [z]
+                if (i < len(self.convs) - 1) or (i%4==3):
+                    z = self.batchnorms[i](z)
+                    if self.activation == "relu":
+                        z = z.relu()
+                    elif self.activation == "leaky_relu":
+                        z = F.leaky_relu(z, negative_slope=0.01)
+                    elif self.activation == "tanh":
+                        z = torch.tanh(z)
+
+                if i%4 == 3:
+                    z = self.jumps[i//4](zs[4*(i//4):4*((i//4)+1)])
+                    # z = self.jumps[i//4](zs)
+                    # zs = []
+                    x_0 = z
+                    if self.jk_mode == 'cat':
+                        z = self.lins[-1](z)
+                        x_0 = z
+            return z
 
 class GAE(torch.nn.Module):
-    """The Graph Auto-Encoder model from the
-    `"Variational Graph Auto-Encoders" <https://arxiv.org/abs/1611.07308>`_
-    paper based on user-defined encoder and decoder models.
-    Args:
-        encoder (Module): The encoder module.
-        decoder (Module, optional): The decoder module. If set to :obj:`None`,
-            will default to the
-            :class:`torch_geometric.nn.models.InnerProductDecoder`.
-            (default: :obj:`None`)
+    '''Graph Auto-Encoder
+
+    gets link probabilities by calculating inner products of node features
+
+    Attributes:
+        device (:obj:`int`): 'cpu', 'cuda'. 
+        encoder:
+        self_loop_bias:
+        sigmoid_bias
         bias (torch.nn.ModuleList): list of sigmoid bias.
-    """
+    '''   
     def __init__(self, encoder, self_loop_mask = True, sigmoid_bias = False):
         '''
-        self_loop_mask (bool): If seto to True, mask self loops in the graph when calculating the loss. (Default: False)
-        sigmoid_bias (bool): If seto to True, add a scalar bias to the sigmoid input tensor. (sigmoid(z^tz + b)。 (Default: False)
+        Args:
+            encoder
+            self_loop_bias
+            sigmoid_bias
         '''
         super(GAE, self).__init__()
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -464,18 +550,23 @@ class GAE(torch.nn.Module):
             self.bias.append(Bias())
 
     def encode(self, *args, **kwargs):
-        r"""Runs the encoder and computes node-wise latent variables."""
+        '''
+        runs the encoder and computes node-wise latent features.
+
+        Returns:
+            z (torch.tensor[num_nodes, output_channels]): node-wise latent features.
+        '''
         return self.encoder(*args, **kwargs)
 
     def decode(self, z):
         '''
-        モデルの出力から、全てのノードの組におけるリンク存在確率を出力する.
+        gets link probabilities from the outputs of the encode model
 
         Parameters:
-            z (torch.tensor[num_nodes, output_channels]): モデルの出力.
+            z (torch.tensor[num_nodes, output_channels]): node-wise latent features.
 
         Returns:
-            probs (torch.tensor[num_edges, num_edges]: リンクの存在確率の隣接行列.
+            probs (torch.tensor[num_edges, num_edges]: adjacency matrix of link probabilities.
         '''
         if self.sigmoid_bias is True:
             if self.self_loop_mask is True:
@@ -490,10 +581,16 @@ class GAE(torch.nn.Module):
         return probs
 
     def encode_decode(self, *args, **kwargs):
+        '''
+        runs the encoder, computes node-wise latent variables, and gets link probabilities.
+
+        Returns:
+            probs (torch.tensor[num_edges, num_edges]: adjacency matrix of link probabilities.
+        '''
         return self.decode(self.encoder(*args, **kwargs))
 
 class VGAE(GAE):
-    r"""The Variational Graph Auto-Encoder model from the
+    r'''The Variational Graph Auto-Encoder model from the
     `"Variational Graph Auto-Encoders" <https://arxiv.org/abs/1611.07308>`_
     paper.
     Args:
@@ -503,7 +600,7 @@ class VGAE(GAE):
             will default to the
             :class:`torch_geometric.nn.models.InnerProductDecoder`.
             (default: :obj:`None`)
-    """
+    '''
     def __init__(self, encoder, self_loop_mask = True, sigmoid_bias = False):
         super(VGAE, self).__init__(encoder, self_loop_mask, sigmoid_bias)
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -520,14 +617,17 @@ class VGAE(GAE):
             return mu
 
     def encode(self, *args, **kwargs):
-        """"""
+        '''Runs the encoder and computes node-wise latent variables.
+        '''
+
         self.__mu__, self.__logstd__ = self.encoder(*args, **kwargs)
         self.__logstd__ = self.__logstd__.clamp(max=self.MAX_LOGSTD)
         z = self.reparametrize(self.__mu__, self.__logstd__)
         return z
 
     def kl_loss(self, mu=None, logstd=None):
-        r"""Computes the KL loss, either for the passed arguments :obj:`mu`
+        r'''
+        Computes the KL loss, either for the passed arguments :obj:`mu`
         and :obj:`logstd`, or based on latent variables from last encoding.
         Args:
             mu (Tensor, optional): The latent space for :math:`\mu`. If set to
@@ -536,13 +636,59 @@ class VGAE(GAE):
             logstd (Tensor, optional): The latent space for
                 :math:`\log\sigma`.  If set to :obj:`None`, uses the last
                 computation of :math:`\log\sigma^2`.(default: :obj:`None`)
-        """
+        '''
+
         mu = self.__mu__ if mu is None else mu
         logstd = self.__logstd__ if logstd is None else logstd.clamp(
             max=self.MAX_LOGSTD)
         return -0.5 * torch.mean(
             torch.sum(1 + 2 * logstd - mu**2 - logstd.exp()**2, dim=1))
 
+class Cat_Linear_Encoder(torch.nn.Module):
+    def __init__(self, encoder, in_channels, hidden_channels, out_channels=1, num_layers=2, dropout=0.5, self_loop_mask = True):
+        super(Cat_Linear_Encoder, self).__init__()
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+        self.encoder = encoder
+        self.self_loop_mask = self_loop_mask
+
+        self.lins = torch.nn.ModuleList()
+        self.lins.append(torch.nn.Linear(in_channels * 2, hidden_channels))
+        for _ in range(num_layers - 2):
+            self.lins.append(torch.nn.Linear(hidden_channels, hidden_channels))
+        self.lins.append(torch.nn.Linear(hidden_channels, out_channels))
+
+        self.dropout = dropout
+
+    def encode(self, *args, **kwargs):
+        '''Runs the encoder and computes node-wise latent variables.
+        '''
+
+        return self.encoder(*args, **kwargs)
+
+    def decode(self, z):
+        num_nodes = z.size(0)
+
+        x = torch.cat((z[0].expand(num_nodes, -1), z), axis=1)
+        for i in range(1, num_nodes):
+            tmp = torch.cat((z[i].expand(num_nodes, -1), z), axis=1)
+            x = torch.cat((x, tmp), axis=0)
+
+        for lin in self.lins[:-1]:
+            x = lin(x)
+            x = F.relu(x)
+            x = F.dropout(x, p=self.dropout, training=self.training)
+        x = self.lins[-1](x)
+        x = torch.reshape(x, (num_nodes, num_nodes))
+
+        if self.self_loop_mask is True:
+            probs = torch.sigmoid(x) * (torch.eye(z.size(0))!=1).to(self.device)
+        else:
+            probs = torch.sigmoid(x)
+        return probs
+
+    def encode_decode(self, *args, **kwargs):
+        return self.decode(self.encoder(*args, **kwargs))
 
 class Link_Prediction_Model():
     '''Link_Prediction_Model
@@ -675,21 +821,22 @@ class Link_Prediction_Model():
         '''
 
         print('######################################')
-        print('reset the model and the random seed.')
-
-        self.encode_modelname = encode_modelname
-        self.decode_modelname = decode_modelname
-        self.self_loop_mask = self_loop_mask
 
         seed = 42
         np.random.seed(seed)
         random.seed(seed)
         torch.manual_seed(seed)
         torch.cuda.manual_seed(seed)
+        print('reset the model and the random seed.')
+
+        self.encode_modelname = encode_modelname
+        self.decode_modelname = decode_modelname
+        self.self_loop_mask = self_loop_mask            
 
         if self.encode_modelname == 'NN':
             self.encode_model = NN(
                 data = self.data,
+                decode_modelname = self.decode_modelname,
                 num_hidden_channels = num_hidden_channels, 
                 num_layers = num_layers, 
                 hidden_channels = hidden_channels,
@@ -700,6 +847,7 @@ class Link_Prediction_Model():
         elif self.encode_modelname == 'GCN':
             self.encode_model = GCN(
                 data = self.data,
+                decode_modelname = self.decode_modelname,
                 train_pos_edge_adj_t = self.train_pos_edge_adj_t,
                 num_hidden_channels = num_hidden_channels, 
                 num_layers = num_layers, 
@@ -711,6 +859,7 @@ class Link_Prediction_Model():
         elif self.encode_modelname == 'GCNII':
             self.encode_model = GCNII(
                 data = self.data,
+                decode_modelname = self.decode_modelname,
                 train_pos_edge_adj_t = self.train_pos_edge_adj_t,
                 num_hidden_channels=num_hidden_channels, 
                 num_layers=num_layers, 
@@ -724,6 +873,7 @@ class Link_Prediction_Model():
         elif self.encode_modelname == 'GCNIIwithJK':
             self.encode_model = GCNIIwithJK(
                 data = self.data,
+                decode_modelname = self.decode_modelname,
                 train_pos_edge_adj_t = self.train_pos_edge_adj_t,
                 num_hidden_channels=num_hidden_channels, 
                 num_layers=num_layers, 
