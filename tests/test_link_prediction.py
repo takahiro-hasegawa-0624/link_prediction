@@ -59,10 +59,10 @@ def main():
     model.my_optimizer(optimizer)
 
     scheduler = {}
-    if (args.weight_decay is not None) and (args.lr is not None):
+    if (args.lins_convs_step_size is not None) and (args.lins_convs_gamma is not None):
         scheduler['convs'] = torch.optim.lr_scheduler.StepLR(model.optimizer['convs'], step_size=args.lins_convs_step_size, gamma=args.lins_convs_gamma)
         scheduler['lins'] = torch.optim.lr_scheduler.StepLR(model.optimizer['lins'], step_size=args.lins_convs_step_size, gamma=args.lins_convs_gamma)
-    if (args.weight_decay_bias is not None) and (args.lr_bias is not None):
+    if (args.bias_gamma is not None):
         scheduler['bias'] = torch.optim.lr_scheduler.ExponentialLR(model.optimizer['bias'], gamma=args.bias_gamma)
     model.my_scheduler(scheduler)
 
