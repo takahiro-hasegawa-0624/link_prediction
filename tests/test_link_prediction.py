@@ -21,7 +21,7 @@ def main():
     parser.add_argument('--negative_sampling_ratio', type=int, default=1)
     parser.add_argument('--weight_decay', type=float, default=1e-10)
     parser.add_argument('--weight_decay_bias', type=float, default=1e-3)
-    parser.add_argument('--lr', type=float, default=1e-2)
+    parser.add_argument('--lr', type=float, default=1e-1)
     parser.add_argument('--lr_bias', type=float, default=5e-2)
     parser.add_argument('--lins_convs_step_size', type=int, default=None)
     parser.add_argument('--lins_convs_gamma', type=float, default=None)
