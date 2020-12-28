@@ -651,7 +651,7 @@ class Link_Prediction_Model():
         ax.grid()
         if save:
             fig.savefig(path+'/loss.png')
-        if 'inline' in plt.get_backend():
+        if 'ipykernel' in sys.modules:
             plt.show()
 
         # AUCの図示
@@ -667,7 +667,7 @@ class Link_Prediction_Model():
         ax.grid()
         if save:
             fig.savefig(path+'/auc.png')
-        if 'inline' in plt.get_backend():
+        if 'ipykernel' in sys.modules:
             plt.show()
 
         # accuracyの図示
@@ -683,7 +683,7 @@ class Link_Prediction_Model():
         ax.grid()
         if save:
             fig.savefig(path+'/accuracy.png')
-        if 'inline' in plt.get_backend():
+        if 'ipykernel' in sys.modules:
             plt.show()
 
         # ROC曲線の図示
@@ -695,7 +695,7 @@ class Link_Prediction_Model():
         ax.grid()
         if save:
             fig.savefig(path+'/roc.png')
-        if 'inline' in plt.get_backend():
+        if 'ipykernel' in sys.modules:
             plt.show()
 
         # sigmoidのバイアス項の推移を図示
@@ -709,7 +709,7 @@ class Link_Prediction_Model():
             ax.grid()
             if save:
                 fig.savefig(path+'/sigmoid_bias.png')
-        if 'inline' in plt.get_backend():
+        if 'ipykernel' in sys.modules:
             plt.show()
 
         # 特徴量ベクトルのコサイン類似度のヒストグラムを図示
@@ -721,7 +721,7 @@ class Link_Prediction_Model():
         ax.grid(axis='x')
         if save:
             fig.savefig(path+'/cos_similarity.png')
-        if 'inline' in plt.get_backend():
+        if 'ipykernel' in sys.modules:
             plt.show()
 
         # 特徴量ベクトルのノルムの平均値を図示
@@ -734,7 +734,7 @@ class Link_Prediction_Model():
         # ax.grid()
         # if save:
         #     fig.savefig(path+'/average_norm.png')
-        # if 'inline' in plt.get_backend():
+        # if 'ipykernel' in sys.modules:
         #     plt.show()
 
         # 特徴量ベクトルのノルムのヒストグラムを図示
@@ -747,7 +747,7 @@ class Link_Prediction_Model():
         ax.grid(axis='x')
         if save:
             fig.savefig(path+'/norm.png')
-        if 'inline' in plt.get_backend():
+        if 'ipykernel' in sys.modules:
             plt.show()
 
         # 特徴量ベクトルをt-SNEにより次元削減->実際のリンクとともに図示
@@ -763,7 +763,7 @@ class Link_Prediction_Model():
         # ax.set_title(f"t-SNE of feature vectors with edge ({self.encode_modelname} / {self.decode_modelname} / activation_{self.activation} / layers_{self.num_layers})")
         # if save:
         #     fig.savefig(path+'/t-sne.png')
-        # if 'inline' in plt.get_backend():
+        # if 'ipykernel' in sys.modules:
         #     plt.show()
 
         # 混合行列
