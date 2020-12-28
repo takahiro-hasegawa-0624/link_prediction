@@ -26,7 +26,7 @@ def main():
     parser.add_argument('--lins_convs_step_size', type=int, default=None)
     parser.add_argument('--lins_convs_gamma', type=float, default=None)
     parser.add_argument('--bias_gamma', type=float, default=0.992)
-    parser.add_argument('--print_log', type=int, default=1)
+    parser.add_argument('--print_log', type=int, default=0)
 
     args = parser.parse_args()
 
