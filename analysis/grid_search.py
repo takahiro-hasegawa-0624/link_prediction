@@ -36,7 +36,9 @@ def main():
 
     args = parser.parse_args()
 
-    model = Link_Prediction_Model(dataset_name=args.dataset, val_ratio=0.05, test_ratio=0.1)
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+
+    model = Link_Prediction_Model(dataset_name=args.dataset, val_ratio=0.05, test_ratio=0.1, data_dir=os.path.dirname(current_dir)+'/data')
 
     weight_decay_list = np.linspace(np.log10(args.weight_decay_min), np.log10(args.weight_decay_max), args.weight_decay_split)
     weight_decay_list = 10**weight_decay_list
@@ -75,7 +77,7 @@ def main():
         # scheduler['lins'] = torch.optim.lr_scheduler.MultiStepLR(model.optimizer['lins'], milestones=[1000,2000], gamma=lins_convs_gamma)
         model.my_scheduler(scheduler)
             
-        model.run_training(num_epochs=4000, print_log=False, current_dir=os.path.dirname(os.path.abspath(__file__)))
+        model.run_training(num_epochs=4000, print_log=False, save_dir=current_dir)
         model.model_evaluate(validation=True, save=True)
 
         return

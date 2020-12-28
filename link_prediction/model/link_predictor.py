@@ -93,7 +93,7 @@ class Link_Prediction_Model():
 
         summary (pd.DataFrame): 学習結果を集約するDataFrame. csvとして保存.
     '''  
-    def __init__(self, dataset_name='', data=None, val_ratio=0.05, test_ratio=0.1):
+    def __init__(self, dataset_name='', data=None, val_ratio=0.05, test_ratio=0.1, data_dir='../data'):
         '''
         dataを渡し、train_test_splitを行う.
 
@@ -114,7 +114,7 @@ class Link_Prediction_Model():
         self.dataset_name = dataset_name
 
         if data is None:
-            self.data = my_utils.data_downloader(dataset = dataset_name)
+            self.data = my_utils.data_downloader(dataset = dataset_name, data_dir=data_dir)
 
         self.all_pos_edge_index, self.train_pos_edge_adj_t, self.y_true, self.y_train_cpu, self.mask = my_utils.data_processor(self.data)
 
@@ -505,7 +505,7 @@ class Link_Prediction_Model():
         
         return float(loss.cpu()), link_labels.cpu(), link_probs.cpu()
 
-    def run_training(self, num_epochs, print_log = True, current_dir='.'):
+    def run_training(self, num_epochs, print_log = True, save_dir='.'):
         '''
         指定したepoch数、modelを学習する。
 
@@ -518,7 +518,7 @@ class Link_Prediction_Model():
 
         self.start_time = datetime.datetime.now()
 
-        self.base_path = current_dir + f"/output/{self.dataset_name}/{self.encode_modelname}/{self.decode_modelname}/activation_{self.activation}/sigmoidbias_{'True' if self.sigmoid_bias is True else 'False'}/numlayers_{self.num_layers}/negative_sampling_ratio_{self.negative_sampling_ratio}/epochs_{self.num_epochs}/{self.start_time.strftime('%Y%m%d_%H%M')}"
+        self.base_path = save_dir + f"/output/{self.dataset_name}/{self.encode_modelname}/{self.decode_modelname}/activation_{self.activation}/sigmoidbias_{'True' if self.sigmoid_bias is True else 'False'}/numlayers_{self.num_layers}/negative_sampling_ratio_{self.negative_sampling_ratio}/epochs_{self.num_epochs}/{self.start_time.strftime('%Y%m%d_%H%M')}"
 
         self.path_best_model = self.base_path + f"/usebestmodel_True"
         if not os.path.isdir(self.path_best_model):

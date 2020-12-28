@@ -36,7 +36,7 @@ random.seed(seed)
 torch.manual_seed(seed)
 torch.cuda.manual_seed(seed)
 
-def data_downloader(dataset = 'Cora'):
+def data_downloader(dataset = 'Cora', data_dir='../data'):
     '''
     グラフデータをダウンロードする.
 
@@ -48,17 +48,17 @@ def data_downloader(dataset = 'Cora'):
     '''
 
     if dataset in ['Cora', 'CiteSeer', 'PubMed']:
-        data = Planetoid('../data', dataset, transform=T.NormalizeFeatures())[0]
+        data = Planetoid(data_dir, dataset, transform=T.NormalizeFeatures())[0]
 
     elif dataset == 'Factset':
-        df = pd.read_csv('../data/factset/processed_data/feature.csv')
+        df = pd.read_csv(data_dir + '/factset/processed_data/feature.csv')
         N = len(df) # ノード数
 
         # sec_codeとノード番号の対応付け
         dic = {}
         for row in df.itertuples(): dic[row[1]] = row[0]
 
-        edge = pd.read_csv('../data/factset/processed_data/edge.csv', usecols=[0,1]).rename(columns={'SUPPLIER_ID': 'source', 'CUSTOMER_ID': 'target'})
+        edge = pd.read_csv(data_dir + '/factset/processed_data/edge.csv', usecols=[0,1]).rename(columns={'SUPPLIER_ID': 'source', 'CUSTOMER_ID': 'target'})
         edge = edge.applymap(lambda x: dic[x])
 
         # 欠損値の処理
@@ -75,7 +75,7 @@ def data_downloader(dataset = 'Cora'):
 
         # edge_index to tensor
         edge_index = [[], []]
-        for row in pd.read_csv('../data/factset/processed_data/edge.csv', index_col=0).itertuples():
+        for row in pd.read_csv(data_dir + '/factset/processed_data/edge.csv', index_col=0).itertuples():
             edge_index[0].append(dic[row[0]]) # 始点
             edge_index[1].append(dic[row[1]]) # 終点
         edge_index = torch.tensor(edge_index, dtype=torch.long)

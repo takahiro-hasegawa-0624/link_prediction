@@ -30,7 +30,9 @@ def main():
 
     args = parser.parse_args()
 
-    model = Link_Prediction_Model(dataset_name=args.dataset, val_ratio=0.05, test_ratio=0.1)
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+
+    model = Link_Prediction_Model(dataset_name=args.dataset, val_ratio=0.05, test_ratio=0.1, data_dir=os.path.dirname(current_dir)+'/data')
 
     model(
         encode_modelname=args.encode_model, 
@@ -69,7 +71,7 @@ def main():
     else:
         print_log = False
 
-    model.run_training(num_epochs=args.num_epochs, print_log=print_log, current_dir=os.path.dirname(os.path.abspath(__file__)))
+    model.run_training(num_epochs=args.num_epochs, print_log=print_log, save_dir=current_dir)
     model.model_evaluate(validation=True, save=True)
 
     return
