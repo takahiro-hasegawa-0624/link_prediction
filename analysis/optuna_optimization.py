@@ -54,7 +54,7 @@ def run_objective(args, model):
         model.my_optimizer(get_optimizer(trial=trial, model=model, args=args))
         model.my_scheduler(get_scheduler(trial=trial, model=model, args=args))
         
-        model.run_training(num_epochs=args.num_epochs, print_log=False, current_dir=os.path.dirname(os.path.abspath(__file__)))
+        model.run_training(num_epochs=args.num_epochs, print_log=False, save_dir=os.path.dirname(os.path.abspath(__file__)))
         
         model.model_evaluate(validation=True, save=False)
         
