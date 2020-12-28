@@ -17,9 +17,9 @@ def get_optimizer(trial, model, args):
     lr_bias = trial.suggest_uniform('lr_bias', args.lr_bias_min, args.lr_bias_max)
     
     optimizer = {}
-    optimizer['bias'] = torch.optim.Adam(model.model.bias.parameters(), weight_decay=weight_decay_bias, lr=lr_bias)
-    optimizer['convs'] = torch.optim.Adam(model.model.convs.parameters(), weight_decay=weight_decay, lr=lr)
-    optimizer['lins'] = torch.optim.Adam(model.model.lins.parameters(), weight_decay=weight_decay, lr=lr)
+    optimizer['bias'] = torch.optim.Adam(model.decode_model.bias.parameters(), weight_decay=weight_decay_bias, lr=lr_bias)
+    optimizer['convs'] = torch.optim.Adam(model.encode_model.convs.parameters(), weight_decay=weight_decay, lr=lr)
+    optimizer['lins'] = torch.optim.Adam(model.encode_model.lins.parameters(), weight_decay=weight_decay, lr=lr)
     
     return optimizer
 
@@ -51,8 +51,8 @@ def run_objective(args, model):
             threshold = 0.5
         )
         
-        model.my_optimizer(get_optimizer(trial, model, args))
-        model.my_scheduler(get_scheduler(trial, model, args))
+        model.my_optimizer(get_optimizer(trial=trial, model=model, args=args))
+        model.my_scheduler(get_scheduler(trial=trial, model=model, args=args))
         
         model.run_training(num_epochs=args.num_epochs, print_log=False, current_dir=os.path.dirname(os.path.abspath(__file__)))
         
@@ -91,7 +91,7 @@ def main():
     model = Link_Prediction_Model(dataset_name='Cora', val_ratio=0.05, test_ratio=0.1, data_dir=os.path.dirname(current_dir)+'/data')
 
     study = optuna.create_study()
-    study.optimize(run_objective(args, model), timeout=args.timeout)
+    study.optimize(run_objective(args=args, model=model), timeout=args.timeout)
 
     model(
         modelname=args.modelname, 
