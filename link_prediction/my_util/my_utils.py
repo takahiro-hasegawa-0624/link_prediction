@@ -25,8 +25,6 @@ from torch_geometric.utils import train_test_split_edges, to_undirected
 
 import networkx as nx
 
-import models
-
 # choice CPU or GPU
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # device = 'cpu'

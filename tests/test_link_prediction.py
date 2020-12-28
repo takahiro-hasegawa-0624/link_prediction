@@ -1,3 +1,5 @@
+import os, sys
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from link_prediction.model.link_predictor import Link_Prediction_Model
 from link_prediction.my_util import my_utils
 
@@ -9,20 +11,20 @@ def main():
     parser = argparse.ArgumentParser(description='execute grid search')
 
     parser.add_argument('--dataset', type=str, default='Cora')
-    parser.add_argument('--modelname', type=str, default='GCNII')
+    parser.add_argument('--encode_model', type=str, default='GCNII')
+    parser.add_argument('--decode_model', type=str, default='GAE')
     parser.add_argument('--activation', type=str, default='relu')
     parser.add_argument('--num_epochs', type=int, default=1000)
     parser.add_argument('--num_hidden_channels', type=int, default=256)
     parser.add_argument('--num_layers', type=int, default=32)
     parser.add_argument('--jk_mode', type=str, default='max')
     parser.add_argument('--negative_sampling_ratio', type=int, default=1)
-    parser.add_argument('--weight_decay', type=float, default=None)
-    parser.add_argument('--weight_decat_bias', type=float, default=None)
-    parser.add_argument('--lr', type=float, default=None)
-    parser.add_argument('--lr_bias', type=float, default=None)
-    parser.add_argument('--bias_gamma', type=float, default=None)
-    parser.add_argument('--lins_convs_step_size', type=int, default=2)
-    parser.add_argument('--lins_convs_gamma', type=float, default=0.5)
+    parser.add_argument('--weight_decay', type=float, default=1e-10)
+    parser.add_argument('--weight_decay_bias', type=float, default=1e-3)
+    parser.add_argument('--lr', type=float, default=1e-2)
+    parser.add_argument('--lr_bias', type=float, default=5e-2)
+    parser.add_argument('--lins_convs_step_size', type=int, default=None)
+    parser.add_argument('--lins_convs_gamma', type=float, default=None)
     parser.add_argument('--bias_gamma', type=float, default=0.992)
     parser.add_argument('--print_log', type=int, default=1)
 
@@ -31,7 +33,8 @@ def main():
     model = Link_Prediction_Model(dataset_name=args.dataset, val_ratio=0.05, test_ratio=0.1)
 
     model(
-        modelname=args.modelname, 
+        encode_modelname=args.encode_model, 
+        decode_modelname=args.decode_model,
         activation = args.activation, 
         self_loop_mask = True,
         num_hidden_channels = args.num_hidden_channels, 
@@ -66,7 +69,7 @@ def main():
     else:
         print_log = False
 
-    model.run_training(num_epochs=args.num_epochs, print_log=print_log)
+    model.run_training(num_epochs=args.num_epochs, print_log=print_log, current_dir=os.path.dirname(os.path.abspath(__file__)))
     model.model_evaluate(validation=True, save=True)
 
     return

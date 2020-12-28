@@ -34,8 +34,8 @@ from torch_geometric.utils import negative_sampling
 
 import networkx as nx
 
-from node_encoder import NN, GCN, GCNII, GCNIIwithJK
-from link_decoder import GAE, VGAE, Cat_Linear_Encoder
+from link_prediction.model.node_encoder import NN, GCN, GCNII, GCNIIwithJK
+from link_prediction.model.link_decoder import GAE, VGAE, Cat_Linear_Encoder
 from link_prediction.my_util import my_utils
 
 class Link_Prediction_Model():
@@ -505,7 +505,7 @@ class Link_Prediction_Model():
         
         return float(loss.cpu()), link_labels.cpu(), link_probs.cpu()
 
-    def run_training(self, num_epochs, print_log = True):
+    def run_training(self, num_epochs, print_log = True, current_dir='.'):
         '''
         指定したepoch数、modelを学習する。
 
@@ -518,7 +518,7 @@ class Link_Prediction_Model():
 
         self.start_time = datetime.datetime.now()
 
-        self.base_path = f"./output/{self.dataset_name}/{self.encode_modelname}/{self.decode_modelname}/activation_{self.activation}/sigmoidbias_{'True' if self.sigmoid_bias is True else 'False'}/numlayers_{self.num_layers}/negative_sampling_ratio_{self.negative_sampling_ratio}/epochs_{self.num_epochs}/{self.start_time.strftime('%Y%m%d_%H%M')}"
+        self.base_path = current_dir + f"/output/{self.dataset_name}/{self.encode_modelname}/{self.decode_modelname}/activation_{self.activation}/sigmoidbias_{'True' if self.sigmoid_bias is True else 'False'}/numlayers_{self.num_layers}/negative_sampling_ratio_{self.negative_sampling_ratio}/epochs_{self.num_epochs}/{self.start_time.strftime('%Y%m%d_%H%M')}"
 
         self.path_best_model = self.base_path + f"/usebestmodel_True"
         if not os.path.isdir(self.path_best_model):
@@ -880,7 +880,7 @@ class Link_Prediction_Model():
         log_dic['accuracy'] = (c_matrix[1,1]+c_matrix[0,0])/c_matrix.sum().sum()
         log_dic['precision'] = c_matrix[1,1]/(c_matrix[1,1]+c_matrix[0,1])
         log_dic['recall'] = c_matrix[1,1]/(c_matrix[1,1]+c_matrix[1,0])
-        log_dic['path'] = self.base_path
+        log_dic['path'] = f"./output/{self.dataset_name}/{self.encode_modelname}/{self.decode_modelname}/activation_{self.activation}/sigmoidbias_{'True' if self.sigmoid_bias is True else 'False'}/numlayers_{self.num_layers}/negative_sampling_ratio_{self.negative_sampling_ratio}/epochs_{self.num_epochs}/{self.start_time.strftime('%Y%m%d_%H%M')}"
         self.summary = self.summary.append(pd.Series(log_dic), ignore_index=True)
         self.summary.to_csv(path_csv, index=False)
 

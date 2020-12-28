@@ -1,3 +1,5 @@
+import os, sys
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from link_prediction.model.link_predictor import Link_Prediction_Model
 from link_prediction.my_util import my_utils
 
@@ -36,7 +38,8 @@ def get_scheduler(trial, model, args):
 def run_objective(args, model):
     def objective(trial):
         model(
-            modelname=args.modelname, 
+            encode_modelname=args.encode_model, 
+            decode_modelname=args.decode_model, 
             activation = args.activation, 
             self_loop_mask = True,
             num_hidden_channels = 256, 
@@ -51,7 +54,7 @@ def run_objective(args, model):
         model.my_optimizer(get_optimizer(trial, model, args))
         model.my_scheduler(get_scheduler(trial, model, args))
         
-        model.run_training(num_epochs=args.num_epochs, print_log=False)
+        model.run_training(num_epochs=args.num_epochs, print_log=False, current_dir=os.path.dirname(os.path.abspath(__file__)))
         
         model.model_evaluate(validation=True, save=False)
         
@@ -61,7 +64,8 @@ def run_objective(args, model):
 
 def main():
     parser = argparse.ArgumentParser(description='execute optuna studying')
-    parser.add_argument('--modelname', type=str, default='GCNII')
+    parser.add_argument('--encode_model', type=str, default='GCNII')
+    parser.add_argument('--decode_model', type=str, default='GAE')
     parser.add_argument('--activation', type=str, default='relu')
     parser.add_argument('--timeout', type=int, default=60*60*12)
     parser.add_argument('--num_epochs', type=int, default=1000)
@@ -112,7 +116,7 @@ def main():
     scheduler['lins'] = torch.optim.lr_scheduler.MultiStepLR(model.optimizer['lins'], milestones=[1000,2000], gamma=study.best_params['lins_convs_gamma'])
     model.my_scheduler(scheduler)
         
-    model.run_training(num_epochs=5000, print_log=False)
+    model.run_training(num_epochs=5000, print_log=False, current_dir=os.path.dirname(os.path.abspath(__file__)))
     model.model_evaluate(validation=True, save=True)
 
     return

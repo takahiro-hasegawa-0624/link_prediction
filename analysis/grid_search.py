@@ -1,3 +1,5 @@
+import os, sys
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from link_prediction.model.link_predictor import Link_Prediction_Model
 from link_prediction.my_util import my_utils
 
@@ -12,7 +14,8 @@ def main():
     parser = argparse.ArgumentParser(description='execute grid search')
 
     parser.add_argument('--dataset', type=str, default='Cora')
-    parser.add_argument('--modelname', type=str, default='GCNII')
+    parser.add_argument('--encode_model', type=str, default='GCNII')
+    parser.add_argument('--decode_model', type=str, default='GAE')
     parser.add_argument('--activation', type=str, default='relu')
     parser.add_argument('--num_epochs', type=int, default=1000)
     parser.add_argument('--weight_decay_min', type=float, default=1e-12)
@@ -48,7 +51,8 @@ def main():
 
     for weight_decay, weight_decay_bias, lr, lr_bias, bias_gamma in itertools.product(weight_decay_list, weight_decat_bias_list, lr_list, lr_bias_list, bias_gamma_list):
         model(
-            modelname=args.modelname, 
+            encode_modelname=args.encode_model, 
+            decode_modelname=args.decode_model, 
             activation = args.activation, 
             self_loop_mask = True,
             num_hidden_channels = 256, 
@@ -71,7 +75,7 @@ def main():
         # scheduler['lins'] = torch.optim.lr_scheduler.MultiStepLR(model.optimizer['lins'], milestones=[1000,2000], gamma=lins_convs_gamma)
         model.my_scheduler(scheduler)
             
-        model.run_training(num_epochs=4000, print_log=False)
+        model.run_training(num_epochs=4000, print_log=False, current_dir=os.path.dirname(os.path.abspath(__file__)))
         model.model_evaluate(validation=True, save=True)
 
         return
