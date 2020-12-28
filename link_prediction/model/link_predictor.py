@@ -651,7 +651,8 @@ class Link_Prediction_Model():
         ax.grid()
         if save:
             fig.savefig(path+'/loss.png')
-        # plt.show()
+        if 'inline' in plt.get_backend():
+            plt.show()
 
         # AUCの図示
         fig, ax = plt.subplots(figsize=(10, 5), dpi=150)
@@ -666,7 +667,8 @@ class Link_Prediction_Model():
         ax.grid()
         if save:
             fig.savefig(path+'/auc.png')
-        # plt.show()
+        if 'inline' in plt.get_backend():
+            plt.show()
 
         # accuracyの図示
         fig, ax = plt.subplots(figsize=(10, 5), dpi=150)
@@ -681,7 +683,8 @@ class Link_Prediction_Model():
         ax.grid()
         if save:
             fig.savefig(path+'/accuracy.png')
-        # plt.show()
+        if 'inline' in plt.get_backend():
+            plt.show()
 
         # ROC曲線の図示
         fig, ax = plt.subplots(figsize=(10, 10), dpi=150)
@@ -692,7 +695,8 @@ class Link_Prediction_Model():
         ax.grid()
         if save:
             fig.savefig(path+'/roc.png')
-        # plt.show()
+        if 'inline' in plt.get_backend():
+            plt.show()
 
         # sigmoidのバイアス項の推移を図示
         if self.sigmoid_bias is True:
@@ -705,7 +709,8 @@ class Link_Prediction_Model():
             ax.grid()
             if save:
                 fig.savefig(path+'/sigmoid_bias.png')
-            # plt.show()
+        if 'inline' in plt.get_backend():
+            plt.show()
 
         # 特徴量ベクトルのコサイン類似度のヒストグラムを図示
         fig, ax = plt.subplots(figsize=(10, 5), dpi=150)
@@ -716,7 +721,8 @@ class Link_Prediction_Model():
         ax.grid(axis='x')
         if save:
             fig.savefig(path+'/cos_similarity.png')
-        # plt.show()
+        if 'inline' in plt.get_backend():
+            plt.show()
 
         # 特徴量ベクトルのノルムの平均値を図示
         # fig, ax = plt.subplots(figsize=(10, 5), dpi=150)
@@ -728,7 +734,8 @@ class Link_Prediction_Model():
         # ax.grid()
         # if save:
         #     fig.savefig(path+'/average_norm.png')
-        # plt.show()
+        # if 'inline' in plt.get_backend():
+        #     plt.show()
 
         # 特徴量ベクトルのノルムのヒストグラムを図示
         fig, ax = plt.subplots(figsize=(10, 5), dpi=150)
@@ -740,7 +747,8 @@ class Link_Prediction_Model():
         ax.grid(axis='x')
         if save:
             fig.savefig(path+'/norm.png')
-        # plt.show()
+        if 'inline' in plt.get_backend():
+            plt.show()
 
         # 特徴量ベクトルをt-SNEにより次元削減->実際のリンクとともに図示
         # tsne = TSNE(n_components=2, random_state = 42, perplexity = 30, n_iter = 1000)
@@ -755,7 +763,8 @@ class Link_Prediction_Model():
         # ax.set_title(f"t-SNE of feature vectors with edge ({self.encode_modelname} / {self.decode_modelname} / activation_{self.activation} / layers_{self.num_layers})")
         # if save:
         #     fig.savefig(path+'/t-sne.png')
-        # plt.show()
+        # if 'inline' in plt.get_backend():
+        #     plt.show()
 
         # 混合行列
         c_matrix = confusion_matrix(test_link_labels, (test_link_probs>self.threshold))
