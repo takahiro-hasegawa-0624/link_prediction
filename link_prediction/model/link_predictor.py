@@ -34,665 +34,9 @@ from torch_geometric.utils import negative_sampling
 
 import networkx as nx
 
-import my_utils
-
-class Bias(torch.nn.Module):
-    '''Custom Layer
-    
-    Layer which add the same scalar to an input tensor
-
-    Attributes:
-        bias (torch.nn.Parameter[1]): scalar bias
-    '''
-    def __init__(self):
-        super(Bias, self).__init__()
-        self.bias = torch.nn.Parameter(torch.zeros(1))
-
-    def forward(self, x):
-        x = x + self.bias.expand(x.size())
-        return x
-
-class NN(torch.nn.Module):       
-    '''Fully Connected Layer
-
-    Model which applies fully connected layers to node features
-
-    Attributes:
-        device (:obj:`int`): 'cpu', 'cuda'. 
-        lins (torch.nn.ModuleList): list of fully connected layers.
-        convs (torch.nn.ModuleList): list of torch_geometric.nn.GCNConv (which is not used in NN class.)
-        batchnorms (torch.nn.ModuleList): list of batch normalization.
-        activation (obj`int` or None): activation function. None, "relu", "leaky_relu", or "tanh". (Default: None)
-        dropout (float): Dropout ratio.        
-        num_layers (int or None): the number of hidden layers.     
-        hidden_channels_str (str): the number of output channels of each layer.
-    '''
-    def __init__(self, data, decode_modelname, num_hidden_channels = None, num_layers = None, hidden_channels = None, activation = None, dropout = 0.0):
-        '''
-        Args:
-            data (torch_geometric.data.Data): graph data.
-            decode_modelname
-            num_hidden_channels (int or None): the number of output channels. If set to int, the same number of output channels is applied to all the layers . (Default: None)
-            num_layers (int or None): the number of hidden layers. (Default: None)
-            hidden_channels (list of int, or None): list of the number of output channels of each layer. If set, num_hidden_channels and num_layers are invalud. (Default: None)
-            activation (obj`int` or None): activation function. None, "relu", "leaky_relu", or "tanh". (Default: None)
-            dropout (float): Dropout ratio.        
-        '''
-        super(NN, self).__init__()
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.decode_modelname = decode_modelname
-
-        self.lins = torch.nn.ModuleList()
-
-        self.convs = torch.nn.ModuleList()
-        self.convs.append(Linear(1, 1))
-
-        self.batchnorms = torch.nn.ModuleList()
-
-        if hidden_channels is None:
-            self.hidden_channels_str = (f'{num_hidden_channels}_'*num_layers)[:-1]
-
-            self.num_layers = num_layers
-
-            self.lins.append(Linear(data.x.size(1), num_hidden_channels))
-            for _ in range(num_layers - 1):
-                self.lins.append(Linear(num_hidden_channels, num_hidden_channels))
-
-            for _ in range(num_layers - 1):
-                self.batchnorms.append(torch.nn.BatchNorm1d(num_hidden_channels))
-
-            if self.decode_modelname == 'VGAE':
-                self.lins.append(Linear(num_hidden_channels, num_hidden_channels))
-                
-        else:
-            self.hidden_channels_str = ''
-            for num in hidden_channels:
-                self.hidden_channels_str += str(num)+'_'
-            self.hidden_channels_str = self.hidden_channels_str[:-1]
-
-            self.num_layers = len(hidden_channels)
-
-            self.lins.append(Linear(data.x.size(1), hidden_channels[0]))
-            for i in range(len(hidden_channels) - 1):
-                self.lins.append(Linear(hidden_channels[i], hidden_channels[i+1]))
-
-            for i in range(len(hidden_channels) - 1):
-                self.batchnorms.append(torch.nn.BatchNorm1d(hidden_channels[i]))
-
-            if self.decode_modelname == 'VGAE':
-                self.lins.append(Linear(hidden_channels[-2], hidden_channels[-1]))
-
-        self.activation = activation
-        self.dropout = dropout
-
-    def forward(self, x, edge_inde = None):
-        '''
-        Parameters:
-            x (torch.tensor[num_nodes, input_channels]): input of the model (node features).
-            edge_index (torch.tensor[2, num_edges]): tonsor of the pair of node indexes with edges.
-
-        Returns:
-            z (torch.tensor[num_nodes, output_channels]): node-wise latent features.
-        '''
-        z = x
-        if self.decode_modelname == 'VGAE':
-            for i, lin in enumerate(self.lins[:-2]):
-                z = F.dropout(z, self.dropout, training = self.training)
-                z = lin(z)
-                z = self.batchnorms[i](z)
-                if self.activation == "relu":
-                    z = z.relu()
-                elif self.activation == "leaky_relu":
-                    z = F.leaky_relu(z, negative_slope=0.01)
-                elif self.activation == "tanh":
-                    z = torch.tanh(z)
-
-            return self.lins[-2](z), self.lins[-1](z)
-
-        else:
-            for i, lin in enumerate(self.lins):
-                z = F.dropout(z, self.dropout, training = self.training)
-                z = lin(z)
-                if i < len(self.lins) - 1:
-                    z = self.batchnorms[i](z)
-                    if self.activation == "relu":
-                        z = z.relu()
-                    elif self.activation == "leaky_relu":
-                        z = F.leaky_relu(z, negative_slope=0.01)
-                    elif self.activation == "tanh":
-                        z = torch.tanh(z)
-
-            return z
-
-class GCN(torch.nn.Module):  
-    '''Vanilla Graph Neural Network
-
-    ノードの特徴量に対してVanilla GCNを適用するモデル
-
-    Attributes:
-        device (:obj:`int`): 'cpu', 'cuda'. 
-        lins (torch.nn.ModuleList): 全結合層のリスト.
-        convs (torch.nn.ModuleList): torch_geometric.nn.GCNConvのリスト.
-        batchnorms (torch.nn.ModuleList): batch normalizationのリスト.
-        activation (obj`int` or None): activation functionを指定。None, "relu", "leaky_relu", or "tanh". (Default: None)
-        dropout (float): 各層のDropoutの割合. 
-        num_layers (int): 隠れ層の数.
-        hidden_channels_str (str): 各層の出力の次元を文字列として記録.
-        train_pos_edge_adj_t (torch.SparseTensor[2, num_pos_edges]): trainデータのリンク.
-    '''     
-    def __init__(self, data, decode_modelname, train_pos_edge_adj_t, num_hidden_channels = None, num_layers = None, hidden_channels = None, activation = None, dropout = 0.0):
-        '''
-        Args:
-            data (torch_geometric.data.Data): グラフデータ.
-            decode_modelname
-            train_pos_edge_adj_t (torch.SparseTensor[2, num_pos_edges]): trainデータのリンク.
-            num_hidden_channels (int or None): 隠れ層の出力次元数. 全ての層で同じ値が適用される. (Default: None)
-            num_layers (int or None): 隠れ層の数. (Default: None)
-            hidden_channels (list of int, or None): 各隠れ層の出力の配列. 指定するとnum_hidden_channels とnum_layersは無効化される. (Default: None)
-            activation (obj`int` or None): activation functionを指定。None, "relu", "leaky_relu", or "tanh". (Default: None)
-            dropout (float): 各層のDropoutの割合. (Default: 0.0)
-        '''
-        super(GCN, self).__init__()
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.decode_modelname = decode_modelname
-
-        self.train_pos_edge_adj_t = train_pos_edge_adj_t
-
-        self.lins = torch.nn.ModuleList()
-        self.lins.append(Linear(1, 1))
-        
-        self.convs = torch.nn.ModuleList()
-
-        self.batchnorms = torch.nn.ModuleList()
-
-        if hidden_channels is None:
-            self.hidden_channels_str = (f'{num_hidden_channels}_'*num_layers)[:-1]
-
-            self.num_layers = num_layers
-            self.convs.append(GCNConv(data.x.size(1), num_hidden_channels))
-            for _ in range(num_layers - 1):
-                self.convs.append(GCNConv(num_hidden_channels, num_hidden_channels))
-
-            for _ in range(num_layers - 1):
-                self.batchnorms.append(torch.nn.BatchNorm1d(num_hidden_channels))
-
-            if self.decode_modelname == 'VGAE':
-                self.convs.append(GCNConv(num_hidden_channels, num_hidden_channels))
-
-        else:            
-            self.hidden_channels_str = ''
-            for num in hidden_channels:
-                self.hidden_channels_str += str(num)+'_'
-            self.hidden_channels_str = self.hidden_channels_str[:-1]
-
-            self.num_layers = len(hidden_channels)
-            self.convs.append(GCNConv(data.x.size(1), hidden_channels[0]))
-            for i in range(len(hidden_channels) - 1):
-                self.convs.append(GCNConv(hidden_channels[i], hidden_channels[i+1]))
-
-            for i in range(len(hidden_channels) - 1):
-                self.batchnorms.append(torch.nn.BatchNorm1d(hidden_channels[i]))
-
-            if self.decode_modelname == 'VGAE':
-                self.convs.append(GCNConv(hidden_channels[-2], hidden_channels[-1]))
-
-        self.activation = activation
-        self.dropout = dropout
-
-    def forward(self, x, edge_index=None):
-        '''
-        Parameters:
-            x (torch.tensor[num_nodes, input_channels]): input of the model (node features).
-            edge_index (torch.tensor[2, num_edges]): tonsor of the pair of node indexes with edges.
-
-        Returns:
-            z (torch.tensor[num_nodes, output_channels]): node-wise latent features.
-        '''
-        if edge_index is None:
-            edge_index = self.train_pos_edge_adj_t
-
-        z = x
-        if self.decode_modelname == 'VGAE':
-            for i, conv in enumerate(self.convs[:-2]):
-                z = F.dropout(z, self.dropout, training = self.training)
-                z = conv(z, edge_index)
-                z = self.batchnorms[i](z)
-                if self.activation == "relu":
-                    z = z.relu()
-                elif self.activation == "leaky_relu":
-                    z = F.leaky_relu(z, negative_slope=0.01)
-                elif self.activation == "tanh":
-                    z = torch.tanh(z)
-
-            return self.convs[-2](z, edge_index), self.convs[-1](z, edge_index)
-
-        else:
-            for i, conv in enumerate(self.convs):
-                z = F.dropout(z, self.dropout, training = self.training)
-                z = conv(z, edge_index)
-                if i < len(self.convs) - 1:
-                    z = self.batchnorms[i](z)
-                    if self.activation == "relu":
-                        z = z.relu()
-                    elif self.activation == "leaky_relu":
-                        z = F.leaky_relu(z, negative_slope=0.01)
-                    elif self.activation == "tanh":
-                        z = torch.tanh(z)
-
-            return z
-
-class GCNII(torch.nn.Module):       
-    '''GCNII
-
-    ノードの特徴量に対してGCNIIを適用するモデル
-
-    Attributes:
-        device (:obj:`int`): 'cpu', 'cuda'. 
-        lins (torch.nn.ModuleList): 全結合層のリスト.
-        convs (torch.nn.ModuleList): torch_geometric.nn.GCNConvのリスト.
-        batchnorms (torch.nn.ModuleList): batch normalizationのリスト.
-        activation (obj`int` or None): activation functionを指定。None, "relu", "leaky_relu", or "tanh". (Default: None)
-        dropout (float): 各層のDropoutの割合. 
-        num_layers (int or None): 隠れ層の数.
-        hidden_channels_str (str): 各層の出力の次元を文字列として記録
-        train_pos_edge_adj_t (torch.SparseTensor[2, num_pos_edges]): trainデータのリンク.
-    '''    
-
-    def __init__(self, data, decode_modelname, train_pos_edge_adj_t, num_hidden_channels, num_layers, alpha=0.1, theta=0.5, shared_weights = True, activation = None, dropout = 0.0):
-        '''
-        Args:
-            data (torch_geometric.data.Data): グラフデータ.
-            decode_modelname
-            train_pos_edge_adj_t (torch.SparseTensor[2, num_pos_edges]): trainデータのリンク.
-            num_hidden_channels (int or None): 隠れ層の出力次元数. 全ての層で同じ値が適用される.
-            num_layers (int or None): 隠れ層の数.
-            alpha (float): convolution後に初期層を加える割合. (Default: 0.1)
-            theta (float): .
-            shared_weights (bool): . (Default: True)
-            activation (obj`int` or None): activation functionを指定。None, "relu", "leaky_relu", or "tanh". (Default: None)
-            dropout (float): 各層のDropoutの割合. (Default: 0.0)
-        '''
-        super(GCNII, self).__init__()
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.decode_modelname = decode_modelname
-
-        self.num_layers = num_layers
-        self.train_pos_edge_adj_t = train_pos_edge_adj_t
-        self.hidden_channels_str = (f'{num_hidden_channels}_'*num_layers)[:-1]
-
-        self.lins = torch.nn.ModuleList()
-        self.lins.append(GCNConv(data.x.size(1), num_hidden_channels))
-
-        self.convs = torch.nn.ModuleList()
-        for layer in range(num_layers):
-            self.convs.append(GCN2Conv(num_hidden_channels, alpha, theta, layer+1, shared_weights = shared_weights, normalize = False))
-
-        if self.decode_modelname == 'VGAE':
-            self.convs.append(GCN2Conv(num_hidden_channels, alpha, theta, layer+1, shared_weights = shared_weights, normalize = False))
-
-        self.batchnorms = torch.nn.ModuleList()
-        for layer in range(num_layers - 1):
-            self.batchnorms.append(torch.nn.BatchNorm1d(num_hidden_channels))
-
-        self.activation = activation
-        self.dropout = dropout    
-
-    def forward(self, x, edge_index=None):
-        '''
-        Parameters:
-            x (torch.tensor[num_nodes, input_channels]): input of the model (node features).
-            edge_index (torch.tensor[2, num_edges]): tonsor of the pair of node indexes with edges.
-
-        Returns:
-            z (torch.tensor[num_nodes, output_channels]): node-wise latent features.
-        '''
-        if edge_index is None:
-            edge_index = self.train_pos_edge_adj_t
-
-        # 線形変換で次元削減して入力とする
-        z = self.lins[0](x, edge_index)
-
-        x_0 = z
-
-        if self.decode_modelname == 'VGAE':
-            for i, conv in enumerate(self.convs[:-2]):
-                z = F.dropout(z, self.dropout, training = self.training)
-                z = conv(z, x_0, edge_index)
-                z = self.batchnorms[i](z)
-                if self.activation == "relu":
-                    z = z.relu()
-                elif self.activation == "leaky_relu":
-                    z = F.leaky_relu(z, negative_slope=0.01)
-                elif self.activation == "tanh":
-                    z = torch.tanh(z)
-
-            return self.convs[-2](z, x_0, edge_index), self.convs[-1](z, x_0, edge_index)
-
-        else:
-            for i, conv in enumerate(self.convs):
-                z = F.dropout(z, self.dropout, training = self.training)
-                z = conv(z, x_0, edge_index)
-                if i < len(self.convs) - 1:
-                    z = self.batchnorms[i](z)
-                    if self.activation == "relu":
-                        z = z.relu()
-                    elif self.activation == "leaky_relu":
-                        z = F.leaky_relu(z, negative_slope=0.01)
-                    elif self.activation == "tanh":
-                        z = torch.tanh(z)
-
-            return z
-
-
-class GCNIIwithJK(torch.nn.Module):       
-    '''GCNII with Jumping Knowledge
-
-    ノードの特徴量に対してGCNIIを適用し、Jumping Knowledgeでマルチスケール化
-
-    Attributes:
-        device (:obj:`int`): 'cpu', 'cuda'. 
-        lins (torch.nn.ModuleList): 全結合層のリスト.
-        convs (torch.nn.ModuleList): torch_geometric.nn.GCNConvのリスト.
-        jk_mode (:obj:`str`): JK-Netにおけるaggregation方法. ('cat', 'max' or 'lstm'). (Default: 'cat)
-        batchnorms (torch.nn.ModuleList): batch normalizationのリスト.
-        activation (:obj:`int` or None): activation functionを指定。None, "relu", "leaky_relu", or "tanh". (Default: None)
-        dropout (float): 各層のDropoutの割合. 
-        num_layers (int or None): 隠れ層の数.
-        hidden_channels_str (str): 各層の出力の次元を文字列として記録
-        train_pos_edge_adj_t (torch.SparseTensor[2, num_pos_edges]): trainデータのリンク.
-    '''    
-
-    def __init__(self, data, decode_modelname, train_pos_edge_adj_t, num_hidden_channels, num_layers, jk_mode='cat', alpha=0.1, theta=0.5, shared_weights = True, activation = None, dropout = 0.0):
-        '''
-        Args:
-            data (torch_geometric.data.Data): グラフデータ.
-            decode_modelname
-            train_pos_edge_adj_t (torch.SparseTensor[2, num_pos_edges]): trainデータのリンク.
-            num_hidden_channels (int or None): 隠れ層の出力次元数. 全ての層で同じ値が適用される.
-            num_layers (int or None): 隠れ層の数.
-            jk_mode (:obj:`str`): JK-Netにおけるaggregation方法. ('cat', 'max' or 'lstm'). (Default: 'cat)
-            alpha (float): convolution後に初期層を加える割合. (Default: 0.1)
-            theta (float): .
-            shared_weights (bool): . (Default: True)
-            activation (obj`int` or None): activation functionを指定。None, "relu", "leaky_relu", or "tanh". (Default: None)
-            dropout (float): 各層のDropoutの割合. (Default: 0.0)
-        '''
-        super(GCNIIwithJK, self).__init__()
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.decode_modelname = decode_modelname
-
-        self.num_layers = num_layers
-        self.train_pos_edge_adj_t = train_pos_edge_adj_t
-        self.hidden_channels_str = (f'{num_hidden_channels}_'*num_layers)[:-1]
-
-        self.lins = torch.nn.ModuleList()
-        # self.lins.append(Linear(data.x.size(1), num_hidden_channels))
-        self.lins.append(GCNConv(data.x.size(1), num_hidden_channels))
-
-        self.convs = torch.nn.ModuleList()
-        for layer in range(num_layers):
-            self.convs.append(GCN2Conv(num_hidden_channels, alpha, theta, layer+1, shared_weights = shared_weights, normalize = False))
-
-        if self.decode_modelname == 'VGAE':
-            self.convs.append(GCN2Conv(num_hidden_channels, alpha, theta, layer+1, shared_weights = shared_weights, normalize = False))
-
-        self.jk_mode = jk_mode
-        self.jumps = torch.nn.ModuleList()
-        for layer in range(num_layers//4):
-            self.jumps.append(JumpingKnowledge(jk_mode))
-
-        if self.jk_mode == 'cat':
-            self.lins.append(Linear(4 * num_hidden_channels, num_hidden_channels))
-
-        self.batchnorms = torch.nn.ModuleList()
-        for layer in range(num_layers - 1 + (num_layers%4==0)):
-            self.batchnorms.append(torch.nn.BatchNorm1d(num_hidden_channels))
-
-        self.activation = activation
-        self.dropout = dropout    
-
-    def forward(self, x, edge_index=None):
-        '''
-        Parameters:
-            x (torch.tensor[num_nodes, input_channels]): input of the model (node features).
-            edge_index (torch.tensor[2, num_edges]): tonsor of the pair of node indexes with edges.
-
-        Returns:
-            z (torch.tensor[num_nodes, output_channels]): node-wise latent features.
-        '''
-        if edge_index is None:
-            edge_index = self.train_pos_edge_adj_t
-
-        # 線形変換で次元削減して入力とする
-        # x = F.dropout(self.data.x, self.dropout, training=self.training)
-        z = self.lins[0](x, edge_index)
-
-        x_0 = z
-
-        if self.decode_modelname == 'VGAE':
-            zs = []
-            for i, conv in enumerate(self.convs[:-2]):
-                z = F.dropout(z, self.dropout, training = self.training)
-                z = conv(z, x_0, edge_index)
-                zs += [z]
-                if (i < len(self.convs[:-2])) or (i%4==3):
-                    z = self.batchnorms[i](z)
-                    if self.activation == "relu":
-                        z = z.relu()
-                    elif self.activation == "leaky_relu":
-                        z = F.leaky_relu(z, negative_slope=0.01)
-                    elif self.activation == "tanh":
-                        z = torch.tanh(z)
-
-                if i%4 == 3:
-                    z = self.jumps[i//4](zs[4*(i//4):4*((i//4)+1)])
-                    # z = self.jumps[i//4](zs)
-                    # zs = []
-                    x_0 = z
-                    if self.jk_mode == 'cat':
-                        z = self.lins[-1](z)
-                        x_0 = z
-            return self.convs[-2](z, x_0, edge_index), self.convs[-1](z, x_0, edge_index)
-
-        else:
-            zs = []
-            for i, conv in enumerate(self.convs):
-                z = F.dropout(z, self.dropout, training = self.training)
-                z = conv(z, x_0, edge_index)
-                zs += [z]
-                if (i < len(self.convs) - 1) or (i%4==3):
-                    z = self.batchnorms[i](z)
-                    if self.activation == "relu":
-                        z = z.relu()
-                    elif self.activation == "leaky_relu":
-                        z = F.leaky_relu(z, negative_slope=0.01)
-                    elif self.activation == "tanh":
-                        z = torch.tanh(z)
-
-                if i%4 == 3:
-                    z = self.jumps[i//4](zs[4*(i//4):4*((i//4)+1)])
-                    # z = self.jumps[i//4](zs)
-                    # zs = []
-                    x_0 = z
-                    if self.jk_mode == 'cat':
-                        z = self.lins[-1](z)
-                        x_0 = z
-            return z
-
-class GAE(torch.nn.Module):
-    '''Graph Auto-Encoder
-
-    gets link probabilities by calculating inner products of node features
-
-    Attributes:
-        device (:obj:`int`): 'cpu', 'cuda'. 
-        encoder:
-        self_loop_bias:
-        sigmoid_bias
-        bias (torch.nn.ModuleList): list of sigmoid bias.
-    '''   
-    def __init__(self, encoder, self_loop_mask = True, sigmoid_bias = False):
-        '''
-        Args:
-            encoder
-            self_loop_bias
-            sigmoid_bias
-        '''
-        super(GAE, self).__init__()
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-        self.encoder = encoder
-        self.self_loop_mask = self_loop_mask
-        self.sigmoid_bias = sigmoid_bias
-
-        self.bias = torch.nn.ModuleList()
-        self.bias.append(Bias())
-
-    def encode(self, *args, **kwargs):
-        '''
-        runs the encoder and computes node-wise latent features.
-
-        Returns:
-            z (torch.tensor[num_nodes, output_channels]): node-wise latent features.
-        '''
-        return self.encoder(*args, **kwargs)
-
-    def decode(self, z):
-        '''
-        gets link probabilities from the outputs of the encode model
-
-        Parameters:
-            z (torch.tensor[num_nodes, output_channels]): node-wise latent features.
-
-        Returns:
-            probs (torch.tensor[num_edges, num_edges]: adjacency matrix of link probabilities.
-        '''
-        if self.sigmoid_bias is True:
-            if self.self_loop_mask is True:
-                probs = torch.sigmoid((self.bias[0](torch.mm(z, z.t()))) * (torch.eye(z.size(0))!=1).to(self.device))
-            else:
-                probs = torch.sigmoid(self.bias[0](torch.mm(z, z.t())))
-        else:
-            if self.self_loop_mask is True:
-                probs = torch.sigmoid((torch.mm(z, z.t())) * (torch.eye(z.size(0))!=1).to(self.device))
-            else:
-                probs = torch.sigmoid(torch.mm(z, z.t()))
-        return probs
-
-    def encode_decode(self, *args, **kwargs):
-        '''
-        runs the encoder, computes node-wise latent variables, and gets link probabilities.
-
-        Returns:
-            probs (torch.tensor[num_edges, num_edges]: adjacency matrix of link probabilities.
-        '''
-        z = self.encode(*args, **kwargs)
-        return self.decode(z)
-
-class VGAE(GAE):
-    r'''The Variational Graph Auto-Encoder model from the
-    `"Variational Graph Auto-Encoders" <https://arxiv.org/abs/1611.07308>`_
-    paper.
-    Args:
-        encoder (Module): The encoder module to compute :math:`\mu` and
-            :math:`\log\sigma^2`.
-        decoder (Module, optional): The decoder module. If set to :obj:`None`,
-            will default to the
-            :class:`torch_geometric.nn.models.InnerProductDecoder`.
-            (default: :obj:`None`)
-    '''
-    def __init__(self, encoder, self_loop_mask = True, sigmoid_bias = False):
-        super(VGAE, self).__init__(encoder, self_loop_mask, sigmoid_bias)
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.MAX_LOGSTD = 10
-
-        self.bias = torch.nn.ModuleList()
-        self.bias.append(Bias())
-
-    def reparametrize(self, mu, logstd):
-        if self.training:
-            return mu + torch.randn_like(logstd) * torch.exp(logstd)
-        else:
-            return mu
-
-    def encode(self, *args, **kwargs):
-        '''Runs the encoder and computes node-wise latent variables.
-        '''
-
-        self.__mu__, self.__logstd__ = self.encoder(*args, **kwargs)
-        self.__logstd__ = self.__logstd__.clamp(max=self.MAX_LOGSTD)
-        z = self.reparametrize(self.__mu__, self.__logstd__)
-        return z
-
-    def kl_loss(self, mu=None, logstd=None):
-        r'''
-        Computes the KL loss, either for the passed arguments :obj:`mu`
-        and :obj:`logstd`, or based on latent variables from last encoding.
-        Args:
-            mu (Tensor, optional): The latent space for :math:`\mu`. If set to
-                :obj:`None`, uses the last computation of :math:`mu`.
-                (default: :obj:`None`)
-            logstd (Tensor, optional): The latent space for
-                :math:`\log\sigma`.  If set to :obj:`None`, uses the last
-                computation of :math:`\log\sigma^2`.(default: :obj:`None`)
-        '''
-
-        mu = self.__mu__ if mu is None else mu
-        logstd = self.__logstd__ if logstd is None else logstd.clamp(
-            max=self.MAX_LOGSTD)
-        return -0.5 * torch.mean(
-            torch.sum(1 + 2 * logstd - mu**2 - logstd.exp()**2, dim=1))
-
-class Cat_Linear_Encoder(torch.nn.Module):
-    def __init__(self, encoder, in_channels, hidden_channels, out_channels=1, num_layers=2, dropout=0.5, self_loop_mask = True):
-        super(Cat_Linear_Encoder, self).__init__()
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-        self.encoder = encoder
-        self.self_loop_mask = self_loop_mask
-
-        self.lins = torch.nn.ModuleList()
-        self.lins.append(torch.nn.Linear(in_channels * 2, hidden_channels))
-        for _ in range(num_layers - 2):
-            self.lins.append(torch.nn.Linear(hidden_channels, hidden_channels))
-        self.lins.append(torch.nn.Linear(hidden_channels, out_channels))
-
-        self.bias = torch.nn.ModuleList()
-        self.bias.append(Bias())
-
-        self.dropout = dropout
-
-    def encode(self, *args, **kwargs):
-        '''Runs the encoder and computes node-wise latent variables.
-        '''
-
-        return self.encoder(*args, **kwargs)
-
-    def decode(self, z):
-        num_nodes = z.size(0)
-
-        adj = torch.zeros(num_nodes,num_nodes)
-        for i in range(num_nodes):
-            # x = torch.cat((z[i].expand(num_nodes, -1), z), axis=1)
-            for j in range(num_nodes):
-                x = torch.cat((z[i], z[j]), axis=0)
-
-                for lin in self.lins[:-1]:
-                    x = lin(x)
-                    x = F.relu(x)
-                    x = F.dropout(x, p=self.dropout, training=self.training)
-                x = self.lins[-1](x)
-                # x = torch.reshape(x, (1, num_nodes))
-                adj[i][j] = x
-
-        if self.self_loop_mask is True:
-            probs = torch.sigmoid(x) * (torch.eye(z.size(0))!=1).to(self.device)
-        else:
-            probs = torch.sigmoid(x)
-        return probs
-
-    def encode_decode(self, *args, **kwargs):
-        return self.decode(self.encoder(*args, **kwargs))
+from node_encoder import NN, GCN, GCNII, GCNIIwithJK
+from link_decoder import GAE, VGAE, Cat_Linear_Encoder
+from link_prediction.my_util import my_utils
 
 class Link_Prediction_Model():
     '''Link_Prediction_Model
@@ -754,7 +98,7 @@ class Link_Prediction_Model():
         dataを渡し、train_test_splitを行う.
 
         Parameters:
-            dataset_name (:obj:`str` or None): データセット名.'cora', 'factset' (Default: '')
+            dataset_name (:obj:`str` or None): データセット名.'Cora', 'factset' (Default: '')
             data (torch_geometric.data.Data or None): グラフデータ. (Default: None)
             val_ratio (float): 全体のデータ数に対するvalidationデータの割合. (Default: 0.05)
             test_ratio (float): 全体のデータ数に対するtestデータの割合. (Default: 0.1)
@@ -972,7 +316,8 @@ class Link_Prediction_Model():
         
         self.logs=''
 
-        print(f'model: {self.encode_modelname}')
+        print(f'encode_model: {self.encode_modelname}')
+        print(f'decode_model: {self.decode_modelname}')
         print(f'num_layers: {self.num_layers}')
         print(f'activation: {self.activation}')
         print(f'sigmoid_bias: {self.sigmoid_bias}')
@@ -1173,7 +518,7 @@ class Link_Prediction_Model():
 
         self.start_time = datetime.datetime.now()
 
-        self.base_path = f"./output/{self.dataset_name}/{self.encode_modelname}/activation_{self.activation}/sigmoidbias_{'True' if self.sigmoid_bias is True else 'False'}/numlayers_{self.num_layers}/negative_sampling_ratio_{self.negative_sampling_ratio}/epochs_{self.num_epochs}/{self.start_time.strftime('%Y%m%d_%H%M')}"
+        self.base_path = f"./output/{self.dataset_name}/{self.encode_modelname}/{self.decode_modelname}/activation_{self.activation}/sigmoidbias_{'True' if self.sigmoid_bias is True else 'False'}/numlayers_{self.num_layers}/negative_sampling_ratio_{self.negative_sampling_ratio}/epochs_{self.num_epochs}/{self.start_time.strftime('%Y%m%d_%H%M')}"
 
         self.path_best_model = self.base_path + f"/usebestmodel_True"
         if not os.path.isdir(self.path_best_model):
@@ -1302,11 +647,11 @@ class Link_Prediction_Model():
         ax.legend()
         ax.set_xlabel('epoch')
         ax.set_ylabel('binary cross entropy loss')
-        ax.set_title(f"Loss ({self.encode_modelname} / activation_{self.activation} / sigmoidbias_{self.sigmoid_bias} / layers_{self.num_layers})")
+        ax.set_title(f"Loss ({self.encode_modelname} / {self.decode_modelname} / activation_{self.activation} / layers_{self.num_layers})")
         ax.grid()
         if save:
             fig.savefig(path+'/loss.png')
-        plt.show()
+        # plt.show()
 
         # AUCの図示
         fig, ax = plt.subplots(figsize=(10, 5), dpi=150)
@@ -1317,11 +662,11 @@ class Link_Prediction_Model():
         ax.legend()
         ax.set_xlabel('epoch')
         ax.set_ylabel('AUC')
-        ax.set_title(f"AUC ({self.encode_modelname} / activation_{self.activation} / sigmoidbias_{self.sigmoid_bias} / layers_{self.num_layers})")
+        ax.set_title(f"AUC ({self.encode_modelname} / {self.decode_modelname} / activation_{self.activation} / layers_{self.num_layers})")
         ax.grid()
         if save:
             fig.savefig(path+'/auc.png')
-        plt.show()
+        # plt.show()
 
         # accuracyの図示
         fig, ax = plt.subplots(figsize=(10, 5), dpi=150)
@@ -1332,22 +677,22 @@ class Link_Prediction_Model():
         ax.legend()
         ax.set_xlabel('epoch')
         ax.set_ylabel('Accuracy')
-        ax.set_title(f"Accuracy ({self.encode_modelname} / activation_{self.activation} / sigmoidbias_{self.sigmoid_bias} / layers_{self.num_layers})")
+        ax.set_title(f"Accuracy ({self.encode_modelname} / {self.decode_modelname} / activation_{self.activation} / layers_{self.num_layers})")
         ax.grid()
         if save:
             fig.savefig(path+'/accuracy.png')
-        plt.show()
+        # plt.show()
 
         # ROC曲線の図示
         fig, ax = plt.subplots(figsize=(10, 10), dpi=150)
         ax.plot(fpr, tpr)
         ax.set_xlabel('FPR: False positive rate')
         ax.set_ylabel('TPR: True positive rate')
-        ax.set_title(f"AUC = {round(auc, 3)} ({self.encode_modelname} / activation_{self.activation} / sigmoidbias_{self.sigmoid_bias} / layers_{self.num_layers})")
+        ax.set_title(f"AUC = {round(auc, 3)} ({self.encode_modelname} / {self.decode_modelname} / activation_{self.activation} / layers_{self.num_layers})")
         ax.grid()
         if save:
             fig.savefig(path+'/roc.png')
-        plt.show()
+        # plt.show()
 
         # sigmoidのバイアス項の推移を図示
         if self.sigmoid_bias is True:
@@ -1356,22 +701,22 @@ class Link_Prediction_Model():
             ax.plot(np.arange(1, self.num_epochs+1), self.sigmoid_bias_list)
             ax.set_xlabel('epoch')
             ax.set_ylabel('Sigmoid Bias')
-            ax.set_title(f"Sigmoid Bias ({self.encode_modelname} / activation_{self.activation} / sigmoidbias_{self.sigmoid_bias} / layers_{self.num_layers})")
+            ax.set_title(f"Sigmoid Bias ({self.encode_modelname} / {self.decode_modelname} / activation_{self.activation} / layers_{self.num_layers})")
             ax.grid()
             if save:
                 fig.savefig(path+'/sigmoid_bias.png')
-            plt.show()
+            # plt.show()
 
         # 特徴量ベクトルのコサイン類似度のヒストグラムを図示
         fig, ax = plt.subplots(figsize=(10, 5), dpi=150)
         ax.hist(inner_product.flatten(), bins=100)
         ax.set_xlim(-1, 1)
         ax.set_xlabel('cosine similarity of the feature vectors')
-        ax.set_title(f"Cosine Similarity of feature vectors ({self.encode_modelname} / activation_{self.activation} / sigmoidbias_{self.sigmoid_bias} / layers_{self.num_layers})")
+        ax.set_title(f"Cosine Similarity of feature vectors ({self.encode_modelname} / {self.decode_modelname} / activation_{self.activation} / layers_{self.num_layers})")
         ax.grid(axis='x')
         if save:
             fig.savefig(path+'/cos_similarity.png')
-        plt.show()
+        # plt.show()
 
         # 特徴量ベクトルのノルムの平均値を図示
         # fig, ax = plt.subplots(figsize=(10, 5), dpi=150)
@@ -1379,7 +724,7 @@ class Link_Prediction_Model():
         # ax.plot(np.arange(1, self.num_epochs+1), self.feature_distances_list)
         # ax.set_xlabel('epoch')
         # ax.set_ylabel('Average norm')
-        # ax.set_title(f"Average norm of feature vectors ({self.encode_modelname} / activation_{self.activation} / sigmoidbias_{self.sigmoid_bias} / layers_{self.num_layers})")
+        # ax.set_title(f"Average norm of feature vectors ({self.encode_modelname} / {self.decode_modelname} / activation_{self.activation} / layers_{self.num_layers})")
         # ax.grid()
         # if save:
         #     fig.savefig(path+'/average_norm.png')
@@ -1391,11 +736,11 @@ class Link_Prediction_Model():
         ax.hist(z_norm_flatten, bins=100)
         ax.set_xscale('log')
         ax.set_xlabel('norms of the feature vectors')
-        ax.set_title(f"Norms of feature vectors ({self.encode_modelname} / activation_{self.activation} / sigmoidbias_{self.sigmoid_bias} / layers_{self.num_layers})")
+        ax.set_title(f"Norms of feature vectors ({self.encode_modelname} / {self.decode_modelname} / activation_{self.activation} / layers_{self.num_layers})")
         ax.grid(axis='x')
         if save:
             fig.savefig(path+'/norm.png')
-        plt.show()
+        # plt.show()
 
         # 特徴量ベクトルをt-SNEにより次元削減->実際のリンクとともに図示
         # tsne = TSNE(n_components=2, random_state = 42, perplexity = 30, n_iter = 1000)
@@ -1407,7 +752,7 @@ class Link_Prediction_Model():
         # ax.scatter(z_embedded.T[0], z_embedded.T[1], s=1)
         # ax.axes.xaxis.set_visible(False)
         # ax.axes.yaxis.set_visible(False)
-        # ax.set_title(f"t-SNE of feature vectors with edge ({self.encode_modelname} / activation_{self.activation} / threshold_{self.threshold} / {self.num_layers}_layers)")
+        # ax.set_title(f"t-SNE of feature vectors with edge ({self.encode_modelname} / {self.decode_modelname} / activation_{self.activation} / layers_{self.num_layers})")
         # if save:
         #     fig.savefig(path+'/t-sne.png')
         # plt.show()
@@ -1442,9 +787,11 @@ class Link_Prediction_Model():
             self.summary = pd.read_csv(path_csv)
 
         else:
-            self.summary = pd.DataFrame(columns=['datetime', 
+            self.summary = pd.DataFrame(columns=[
+                'datetime', 
                 'dataset', 
                 'encode_modelname', 
+                'decode_modelname',
                 'activation', 
                 'sigmoid_bias', 
                 'negative_injection', 
@@ -1474,12 +821,14 @@ class Link_Prediction_Model():
                 'accuracy', 
                 'precision', 
                 'recall', 
-                'path'])
+                'path'
+            ])
 
         log_dic = {}
         log_dic['datetime'] = self.start_time
         log_dic['dataset'] = self.dataset_name
         log_dic['encode_modelname'] = self.encode_modelname
+        log_dic['decode_modelname'] = self.decode_modelname
         log_dic['activation'] = self.activation
         log_dic['sigmoid_bias'] = self.sigmoid_bias
         log_dic['negative_injection'] = self.negative_injection
@@ -1531,8 +880,7 @@ class Link_Prediction_Model():
         log_dic['accuracy'] = (c_matrix[1,1]+c_matrix[0,0])/c_matrix.sum().sum()
         log_dic['precision'] = c_matrix[1,1]/(c_matrix[1,1]+c_matrix[0,1])
         log_dic['recall'] = c_matrix[1,1]/(c_matrix[1,1]+c_matrix[1,0])
-        log_dic['path'] = f"./output/{self.dataset_name}/{self.encode_modelname}/activation_{self.activation}/sigmoidbias_{'True' if self.sigmoid_bias is True else 'False'}/selfloopmask_{'True' if self.self_loop_mask is True else 'False'}/numlayers_{self.num_layers}/lself.num_layersayeroutputs_{self.encode_model.hidden_channels_str}/epochs_{self.num_epochs}/{self.start_time.strftime('%Y%m%d_%H%M')}"
-
+        log_dic['path'] = self.base_path
         self.summary = self.summary.append(pd.Series(log_dic), ignore_index=True)
         self.summary.to_csv(path_csv, index=False)
 

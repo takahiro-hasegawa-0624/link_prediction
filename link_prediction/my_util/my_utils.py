@@ -38,21 +38,21 @@ random.seed(seed)
 torch.manual_seed(seed)
 torch.cuda.manual_seed(seed)
 
-def data_downloader(dataset = 'cora'):
+def data_downloader(dataset = 'Cora'):
     '''
     グラフデータをダウンロードする.
 
     Parameters:
-        dataset (:obj:`str`): データセット名.'cora', 'factset'
+        dataset (:obj:`str`): データセット名.'Cora', 'CiteSeer', 'factset'
 
     Returens:
         data (torch_geometric.data.Data): グラフデータ.
     '''
 
-    if dataset == 'cora':
+    if dataset in ['Cora', 'CiteSeer', 'PubMed']:
         data = Planetoid('../data', dataset, transform=T.NormalizeFeatures())[0]
 
-    elif dataset == 'factset':
+    elif dataset == 'Factset':
         df = pd.read_csv('../data/factset/processed_data/feature.csv')
         N = len(df) # ノード数
 
