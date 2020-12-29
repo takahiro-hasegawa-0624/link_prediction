@@ -90,11 +90,19 @@ def main():
 
     model = Link_Prediction_Model(dataset_name='Cora', val_ratio=0.05, test_ratio=0.1, data_dir=os.path.dirname(current_dir)+'/data')
 
-    study = optuna.create_study()
+    study_name = f'{args.encode_model}_{args.decode_model}_{args.activation}_{args.num_epochs}_{args.lins_convs_scheduler}'
+
+    study = optuna.create_study(
+        study_name=study_name,
+        storage='sqlite:///optuna_study.db',
+        load_if_exists=True
+    )
+
     study.optimize(run_objective(args=args, model=model), timeout=args.timeout)
 
     model(
-        modelname=args.modelname, 
+        encode_modelname=args.encode_model, 
+        decode_modelname=args.decode_model, 
         activation = args.activation, 
         self_loop_mask = True,
         num_hidden_channels = 256, 
