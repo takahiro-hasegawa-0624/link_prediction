@@ -653,6 +653,8 @@ class Link_Prediction_Model():
             fig.savefig(path+'/loss.png')
         if 'ipykernel' in sys.modules:
             plt.show()
+        else:
+            plt.close()
 
         # AUCの図示
         fig, ax = plt.subplots(figsize=(10, 5), dpi=150)
@@ -669,6 +671,8 @@ class Link_Prediction_Model():
             fig.savefig(path+'/auc.png')
         if 'ipykernel' in sys.modules:
             plt.show()
+        else:
+            plt.close()
 
         # accuracyの図示
         fig, ax = plt.subplots(figsize=(10, 5), dpi=150)
@@ -685,6 +689,8 @@ class Link_Prediction_Model():
             fig.savefig(path+'/accuracy.png')
         if 'ipykernel' in sys.modules:
             plt.show()
+        else:
+            plt.close()
 
         # ROC曲線の図示
         fig, ax = plt.subplots(figsize=(10, 10), dpi=150)
@@ -697,6 +703,8 @@ class Link_Prediction_Model():
             fig.savefig(path+'/roc.png')
         if 'ipykernel' in sys.modules:
             plt.show()
+        else:
+            plt.close()
 
         # sigmoidのバイアス項の推移を図示
         if self.sigmoid_bias is True:
@@ -711,6 +719,8 @@ class Link_Prediction_Model():
                 fig.savefig(path+'/sigmoid_bias.png')
         if 'ipykernel' in sys.modules:
             plt.show()
+        else:
+            plt.close()
 
         # 特徴量ベクトルのコサイン類似度のヒストグラムを図示
         fig, ax = plt.subplots(figsize=(10, 5), dpi=150)
@@ -723,6 +733,8 @@ class Link_Prediction_Model():
             fig.savefig(path+'/cos_similarity.png')
         if 'ipykernel' in sys.modules:
             plt.show()
+        else:
+            plt.close()
 
         # 特徴量ベクトルのノルムの平均値を図示
         # fig, ax = plt.subplots(figsize=(10, 5), dpi=150)
@@ -736,6 +748,8 @@ class Link_Prediction_Model():
         #     fig.savefig(path+'/average_norm.png')
         # if 'ipykernel' in sys.modules:
         #     plt.show()
+        # else:
+        #     plt.close()
 
         # 特徴量ベクトルのノルムのヒストグラムを図示
         fig, ax = plt.subplots(figsize=(10, 5), dpi=150)
@@ -749,6 +763,8 @@ class Link_Prediction_Model():
             fig.savefig(path+'/norm.png')
         if 'ipykernel' in sys.modules:
             plt.show()
+        else:
+            plt.close()
 
         # 特徴量ベクトルをt-SNEにより次元削減->実際のリンクとともに図示
         # tsne = TSNE(n_components=2, random_state = 42, perplexity = 30, n_iter = 1000)
@@ -765,6 +781,8 @@ class Link_Prediction_Model():
         #     fig.savefig(path+'/t-sne.png')
         # if 'ipykernel' in sys.modules:
         #     plt.show()
+        # else:
+        #     plt.close()
 
         # 混合行列
         c_matrix = confusion_matrix(test_link_labels, (test_link_probs>self.threshold))
