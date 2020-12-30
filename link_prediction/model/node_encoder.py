@@ -313,7 +313,7 @@ class GCNII(torch.nn.Module):
 
         # 線形変換で次元削減して入力とする
         z = self.lins[0](x, edge_index)
-        z = torch.relu()
+        z = z.relu()
 
         x_0 = z
 
