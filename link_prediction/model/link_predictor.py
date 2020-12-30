@@ -15,6 +15,7 @@ import cloudpickle
 import random
 import numpy as np
 import pandas as pd
+import itertools
 
 import matplotlib.pyplot as plt
 
@@ -542,7 +543,7 @@ class Link_Prediction_Model():
                 shuffled_negative_edge_index = shuffled_negative_edge_index[:,counts==1]
                 shuffled_negative_edge_index = shuffled_negative_edge_index[:,np.random.permutation(shuffled_negative_edge_index.size(1))]
 
-                self.shuffled_negative_edge_index = torch.cat([self.shuffled_negative_edge_index[:,self.start_shuffled_negative_edge_index:], shuffled_negative_edge_index[:,np.random.permutation(shuffled_edge_index_for_negative_sampling.size(1))]], dim=-1)
+                self.shuffled_negative_edge_index = torch.cat([self.shuffled_negative_edge_index[:,self.start_shuffled_negative_edge_index:], shuffled_negative_edge_index[:,np.random.permutation(shuffled_negative_edge_index.size(1))]], dim=-1)
                 self.start_shuffled_negative_edge_index = 0
 
             train_loss, train_link_labels, train_link_probs, _ = self.train()
