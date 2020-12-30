@@ -353,8 +353,8 @@ class Link_Prediction_Model():
 
         Returns:
             loss (float): binary cross entropy
-            link_labels (numpy.ndarray[num_train_node + num_negative_samples]): trainデータのリedge_indexに対応する正解ラベル. to(device)していない.
-            link_probs (torch.Tensor[num_train_node + num_negative_samples]): trainデータのリedge_indexに対応する正解ラベル. to(device)していない.
+            link_labels (numpy.ndarray[num_train_node + num_negative_samples]): trainデータのedge_indexに対応する正解ラベル. to(device)していない.
+            link_probs (torch.Tensor[num_train_node + num_negative_samples]): trainデータのedge_indexに対応する存在確率. to(device)していない.
             z (torch.Tensor[num_train_node, output_channels]): ノードの特徴量テンソル. to(device)していない.
         '''
         self.encode_model.train()
@@ -393,7 +393,11 @@ class Link_Prediction_Model():
                 num_nodes = self.data.num_nodes,
                 num_neg_samples = self.num_negative_samples)
 
+            neg_edge_index = torch.cat([neg_edge_index, self.incorrect_edge_index], dim = -1)
+            neg_edge_index = torch.unique(neg_edge_index, sorted=False, dim=-1)
+
             edge_index = torch.cat([self.data.train_pos_edge_index, neg_edge_index], dim = -1)
+            self.train_edge_index = edge_index
 
             if self.negative_injection is True:
                 (row, col), N, E = edge_index, self.data.num_nodes, edge_index.size(1)
@@ -522,10 +526,14 @@ class Link_Prediction_Model():
         if not os.path.isdir(self.path_last_model):
             os.makedirs(self.path_last_model)
 
+        self.incorrect_edge_index = torch.zeros(2,0)
         for epoch in range(start_epoch+1, self.num_epochs+1):
             train_loss, train_link_labels, train_link_probs, _ = self.train()
             val_loss, val_link_labels, val_link_probs = self.val()
             test_loss, test_link_labels, test_link_probs = self.test()
+
+            pred_flag = train_link_probs>self.threshold
+            self.incorrect_edge_index = self.train_edge_index[:,train_link_labels != pred_flag]
 
             if self.sigmoid_bias is True:
                 bias = float(self.decode_model.state_dict()['bias.0.bias'].cpu().detach().clone())
