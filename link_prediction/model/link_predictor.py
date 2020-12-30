@@ -698,8 +698,8 @@ class Link_Prediction_Model():
 
         # ROC曲線の図示
         fig, ax = plt.subplots(figsize=(10, 10), dpi=150)
-        ax.plot(val_fpr, val_tpr, lavel=f'validation AUC={round(val_auc, 3)}')
-        ax.plot(test_fpr, test_tpr, lavel=f'test AUC={round(test_auc, 3)}')
+        ax.plot(val_fpr, val_tpr, label=f'validation AUC={round(val_auc, 3)}')
+        ax.plot(test_fpr, test_tpr, label=f'test AUC={round(test_auc, 3)}')
         ax.legend()
         ax.set_xlabel('FPR: False positive rate')
         ax.set_ylabel('TPR: True positive rate')
