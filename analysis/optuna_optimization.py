@@ -26,7 +26,8 @@ def get_optimizer(trial, model, args):
 def get_scheduler(trial, model, args):    
     scheduler = {}
     bias_gamma = trial.suggest_uniform('bias_gamma', args.bias_gamma_min, args.bias_gamma_max)
-    lins_convs_gamma = trial.suggest_uniform('lins_convs_gamma', args.lins_convs_gamma_min, args.lins_convs_gamma_max)
+    if args.lins_convs_scheduler == 1:
+        lins_convs_gamma = trial.suggest_uniform('lins_convs_gamma', args.lins_convs_gamma_min, args.lins_convs_gamma_max)
     scheduler['bias'] = torch.optim.lr_scheduler.ExponentialLR(model.optimizer['bias'], gamma=bias_gamma)
 
     if args.lins_convs_scheduler == 1:
@@ -122,8 +123,9 @@ def main():
 
     scheduler = {}
     scheduler['bias'] = torch.optim.lr_scheduler.ExponentialLR(model.optimizer['bias'], gamma=study.best_params['bias_gamma'])
-    scheduler['convs'] = torch.optim.lr_scheduler.MultiStepLR(model.optimizer['convs'], milestones=[1000,2000], gamma=study.best_params['lins_convs_gamma'])
-    scheduler['lins'] = torch.optim.lr_scheduler.MultiStepLR(model.optimizer['lins'], milestones=[1000,2000], gamma=study.best_params['lins_convs_gamma'])
+    if args.lins_convs_scheduler == 1:
+        scheduler['convs'] = torch.optim.lr_scheduler.MultiStepLR(model.optimizer['convs'], milestones=[1000,2000], gamma=study.best_params['lins_convs_gamma'])
+        scheduler['lins'] = torch.optim.lr_scheduler.MultiStepLR(model.optimizer['lins'], milestones=[1000,2000], gamma=study.best_params['lins_convs_gamma'])
     model.my_scheduler(scheduler)
         
     model.run_training(num_epochs=5000, print_log=False, save_dir=current_dir)
