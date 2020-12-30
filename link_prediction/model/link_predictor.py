@@ -17,22 +17,15 @@ import numpy as np
 import pandas as pd
 
 import matplotlib.pyplot as plt
-import seaborn as sns
 
 from sklearn.metrics import roc_auc_score, roc_curve, confusion_matrix, accuracy_score
 from sklearn.manifold import TSNE
 
 import torch
 import torch.nn.functional as F
-from torch.nn import Linear
 
 from torch_sparse import SparseTensor
-import torch_geometric.transforms as T
-from torch_geometric.data import Data
-from torch_geometric.nn import GCNConv, GCN2Conv, global_mean_pool, JumpingKnowledge
 from torch_geometric.utils import negative_sampling
-
-import networkx as nx
 
 from link_prediction.model.node_encoder import NN, GCN, GCNII, GCNIIwithJK
 from link_prediction.model.link_decoder import GAE, VGAE, Cat_Linear_Encoder
@@ -116,7 +109,7 @@ class Link_Prediction_Model():
         if data is None:
             self.data = my_utils.data_downloader(dataset = dataset_name, data_dir=data_dir)
 
-        self.all_pos_edge_index, self.train_pos_edge_adj_t, self.y_true, self.y_train_cpu, self.mask = my_utils.data_processor(self.data)
+        self.all_pos_edge_index, self.train_pos_edge_adj_t, self.y_true, self.y_train_cpu, self.mask = my_utils.data_processor(data=self.data, undirected=True)
 
         self.data = self.data.to(self.device)
         self.all_pos_edge_index = self.all_pos_edge_index.to(self.device)

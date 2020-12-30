@@ -6,22 +6,19 @@ utilities for link prediction
 Todo:
     隣接行列を図示する関数を作る
 """
-import os.path as osp
 
 import random
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
 
 import torch
-import torch_geometric.transforms as T
-import torch_geometric
 
-from torch_sparse import SparseTensor
+import torch_geometric.transforms as T
 from torch_geometric.data import Data
 from torch_geometric.datasets import Planetoid
 from torch_geometric.utils import train_test_split_edges, to_undirected
+
+from torch_sparse import SparseTensor
 
 import networkx as nx
 
@@ -71,14 +68,14 @@ def data_downloader(dataset = 'Cora', data_dir='../data'):
         # X to tensor
         X = [[] for _ in range(N)]
         for row in df.itertuples(): X[row[0]] = row[1:]
-        X = torch.tensor(X, dtype=torch.float)
+        X = torch.Tensor(X, dtype=torch.float)
 
         # edge_index to tensor
         edge_index = [[], []]
         for row in pd.read_csv(data_dir + '/factset/processed_data/edge.csv', index_col=0).itertuples():
             edge_index[0].append(dic[row[0]]) # 始点
             edge_index[1].append(dic[row[1]]) # 終点
-        edge_index = torch.tensor(edge_index, dtype=torch.long)
+        edge_index = torch.Tensor(edge_index, dtype=torch.long)
 
         # torch_geometric.data.Data 
         data = Data(x=X, edge_index=edge_index)
@@ -91,7 +88,7 @@ def data_downloader(dataset = 'Cora', data_dir='../data'):
 
     return data
 
-def data_processor(data, to_undirected = True):
+def data_processor(data, undirected=True):
     '''
     グラフデータをPytorch Geometric用に処理する.
 
@@ -107,8 +104,8 @@ def data_processor(data, to_undirected = True):
     '''
     
     # 有向グラフを無向グラフ化
-    if to_undirected is True:
-        data.edge_index = torch_geometric.utils.to_undirected(data.edge_index)
+    if undirected is True:
+        data.edge_index = to_undirected(data.edge_index)
         print('transformd the graph to undirected.\n')
 
     # train_test_splitをする前に、エッジのTensorをコピーしておく
@@ -151,7 +148,7 @@ def data_processor(data, to_undirected = True):
     for i,j in G.edges(): 
         df_adj.loc[i,j] = 1
         
-    y_true = torch.tensor(df_adj.to_numpy().flatten(), dtype=torch.float)
+    y_true = torch.Tensor(df_adj.to_numpy().flatten(), dtype=torch.float)
 
     print('y_true is completed.\n')
 
@@ -164,7 +161,7 @@ def data_processor(data, to_undirected = True):
     for i,j in G_train.edges(): 
         df_adj_train.loc[i,j] = 1
         
-    y_train = torch.tensor(df_adj_train.to_numpy().flatten(), dtype=torch.float)
+    y_train = torch.Tensor(df_adj_train.to_numpy().flatten(), dtype=torch.float)
 
     print('y_train is completed.\n')
 

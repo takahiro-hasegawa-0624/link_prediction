@@ -7,32 +7,8 @@ Todo:
 
 """
 
-import os
-import shutil
-import datetime
-import cloudpickle
-
-import random
-import numpy as np
-import pandas as pd
-
-import matplotlib.pyplot as plt
-import seaborn as sns
-
-from sklearn.metrics import roc_auc_score, roc_curve, confusion_matrix, accuracy_score
-from sklearn.manifold import TSNE
-
 import torch
 import torch.nn.functional as F
-from torch.nn import Linear
-
-from torch_sparse import SparseTensor
-import torch_geometric.transforms as T
-from torch_geometric.data import Data
-from torch_geometric.nn import GCNConv, GCN2Conv, global_mean_pool, JumpingKnowledge
-from torch_geometric.utils import negative_sampling
-
-import networkx as nx
 
 from link_prediction.my_util import my_utils
 

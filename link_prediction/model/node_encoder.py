@@ -7,32 +7,10 @@ Todo:
 
 """
 
-import os
-import shutil
-import datetime
-import cloudpickle
-
-import random
-import numpy as np
-import pandas as pd
-
-import matplotlib.pyplot as plt
-import seaborn as sns
-
-from sklearn.metrics import roc_auc_score, roc_curve, confusion_matrix, accuracy_score
-from sklearn.manifold import TSNE
-
 import torch
 import torch.nn.functional as F
-from torch.nn import Linear
 
-from torch_sparse import SparseTensor
-import torch_geometric.transforms as T
-from torch_geometric.data import Data
 from torch_geometric.nn import GCNConv, GCN2Conv, global_mean_pool, JumpingKnowledge
-from torch_geometric.utils import negative_sampling
-
-import networkx as nx
 
 from link_prediction.my_util import my_utils
 
@@ -69,7 +47,7 @@ class NN(torch.nn.Module):
         self.lins = torch.nn.ModuleList()
 
         self.convs = torch.nn.ModuleList()
-        self.convs.append(Linear(1, 1))
+        self.convs.append(torch.nn.Linear(1, 1))
 
         self.batchnorms = torch.nn.ModuleList()
 
@@ -78,15 +56,15 @@ class NN(torch.nn.Module):
 
             self.num_layers = num_layers
 
-            self.lins.append(Linear(data.x.size(1), num_hidden_channels))
+            self.lins.append(torch.nn.Linear(data.x.size(1), num_hidden_channels))
             for _ in range(num_layers - 1):
-                self.lins.append(Linear(num_hidden_channels, num_hidden_channels))
+                self.lins.append(torch.nn.Linear(num_hidden_channels, num_hidden_channels))
 
             for _ in range(num_layers - 1):
                 self.batchnorms.append(torch.nn.BatchNorm1d(num_hidden_channels))
 
             if self.decode_modelname == 'VGAE':
-                self.lins.append(Linear(num_hidden_channels, num_hidden_channels))
+                self.lins.append(torch.nn.Linear(num_hidden_channels, num_hidden_channels))
                 
         else:
             self.hidden_channels_str = ''
@@ -96,15 +74,15 @@ class NN(torch.nn.Module):
 
             self.num_layers = len(hidden_channels)
 
-            self.lins.append(Linear(data.x.size(1), hidden_channels[0]))
+            self.lins.append(torch.nn.Linear(data.x.size(1), hidden_channels[0]))
             for i in range(len(hidden_channels) - 1):
-                self.lins.append(Linear(hidden_channels[i], hidden_channels[i+1]))
+                self.lins.append(torch.nn.Linear(hidden_channels[i], hidden_channels[i+1]))
 
             for i in range(len(hidden_channels) - 1):
                 self.batchnorms.append(torch.nn.BatchNorm1d(hidden_channels[i]))
 
             if self.decode_modelname == 'VGAE':
-                self.lins.append(Linear(hidden_channels[-2], hidden_channels[-1]))
+                self.lins.append(torch.nn.Linear(hidden_channels[-2], hidden_channels[-1]))
 
         self.activation = activation
         self.dropout = dropout
@@ -183,7 +161,7 @@ class GCN(torch.nn.Module):
         self.train_pos_edge_adj_t = train_pos_edge_adj_t
 
         self.lins = torch.nn.ModuleList()
-        self.lins.append(Linear(1, 1))
+        self.lins.append(torch.nn.Linear(1, 1))
         
         self.convs = torch.nn.ModuleList()
 
@@ -410,7 +388,7 @@ class GCNIIwithJK(torch.nn.Module):
         self.hidden_channels_str = (f'{num_hidden_channels}_'*num_layers)[:-1]
 
         self.lins = torch.nn.ModuleList()
-        # self.lins.append(Linear(data.x.size(1), num_hidden_channels))
+        # self.lins.append(torch.nn.Linear(data.x.size(1), num_hidden_channels))
         self.lins.append(GCNConv(data.x.size(1), num_hidden_channels))
 
         self.convs = torch.nn.ModuleList()
@@ -426,7 +404,7 @@ class GCNIIwithJK(torch.nn.Module):
             self.jumps.append(JumpingKnowledge(jk_mode))
 
         if self.jk_mode == 'cat':
-            self.lins.append(Linear(4 * num_hidden_channels, num_hidden_channels))
+            self.lins.append(torch.nn.Linear(4 * num_hidden_channels, num_hidden_channels))
 
         self.batchnorms = torch.nn.ModuleList()
         for layer in range(num_layers - 1 + (num_layers%4==0)):
