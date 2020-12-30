@@ -68,14 +68,14 @@ def data_downloader(dataset = 'Cora', data_dir='../data'):
         # X to tensor
         X = [[] for _ in range(N)]
         for row in df.itertuples(): X[row[0]] = row[1:]
-        X = torch.Tensor(X, dtype=torch.float)
+        X = torch.tensor(X, dtype=torch.float)
 
         # edge_index to tensor
         edge_index = [[], []]
         for row in pd.read_csv(data_dir + '/factset/processed_data/edge.csv', index_col=0).itertuples():
             edge_index[0].append(dic[row[0]]) # 始点
             edge_index[1].append(dic[row[1]]) # 終点
-        edge_index = torch.Tensor(edge_index, dtype=torch.long)
+        edge_index = torch.tensor(edge_index, dtype=torch.long)
 
         # torch_geometric.data.Data 
         data = Data(x=X, edge_index=edge_index)
@@ -148,7 +148,7 @@ def data_processor(data, undirected=True):
     for i,j in G.edges(): 
         df_adj.loc[i,j] = 1
         
-    y_true = torch.Tensor(df_adj.to_numpy().flatten(), dtype=torch.float)
+    y_true = torch.tensor(df_adj.to_numpy().flatten(), dtype=torch.float)
 
     print('y_true is completed.\n')
 
@@ -161,7 +161,7 @@ def data_processor(data, undirected=True):
     for i,j in G_train.edges(): 
         df_adj_train.loc[i,j] = 1
         
-    y_train = torch.Tensor(df_adj_train.to_numpy().flatten(), dtype=torch.float)
+    y_train = torch.tensor(df_adj_train.to_numpy().flatten(), dtype=torch.float)
 
     print('y_train is completed.\n')
 
