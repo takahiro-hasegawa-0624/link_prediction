@@ -404,7 +404,8 @@ class Link_Prediction_Model():
                 neg_edge_index = negative_sampling(
                     edge_index = self.edge_index_for_negative_sampling,
                     num_nodes = self.data.num_nodes,
-                    num_neg_samples = self.num_negative_samples-sampled_incorrect_edge_index.size(1))
+                    num_neg_samples = self.num_negative_samples-sampled_incorrect_edge_index.size(1)
+                )
 
                 neg_edge_index = torch.cat([neg_edge_index, sampled_incorrect_edge_index], dim = -1)
                 neg_edge_index = torch.unique(neg_edge_index, sorted=False, dim=-1)
@@ -413,7 +414,8 @@ class Link_Prediction_Model():
                 neg_edge_index = negative_sampling(
                     edge_index = self.edge_index_for_negative_sampling,
                     num_nodes = self.data.num_nodes,
-                    num_neg_samples = self.num_negative_samples-sampled_incorrect_edge_index.size(1))
+                    num_neg_samples = self.num_negative_samples
+                )
 
             edge_index = torch.cat([self.data.train_pos_edge_index, neg_edge_index], dim = -1)
             self.train_edge_index = edge_index
