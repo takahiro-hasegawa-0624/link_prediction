@@ -121,10 +121,10 @@ class Link_Prediction_Model():
         self.edge_index_for_negative_sampling = torch.cat([self.data.train_pos_edge_index, self.data.test_neg_edge_index, self.data.test_pos_edge_index, self.data.val_neg_edge_index, self.data.val_pos_edge_index], dim = -1)
         self.num_neg_edges = self.data.num_nodes*(self.data.num_nodes-1)/2 - self.data.train_pos_edge_index.size(1)
         
-        self.shuffled_negative_edge_index = torch.cat([torch.Tensor(np.array(list(itertools.combinations(range(self.data.num_nodes), 2))).T), self.edge_index_for_negative_sampling], dim=-1)
+        self.shuffled_negative_edge_index = torch.cat([torch.Tensor(np.array(list(itertools.combinations(range(self.data.num_nodes), 2))).T).to(self.device), self.edge_index_for_negative_sampling], dim=-1)
         self.shuffled_negative_edge_index, counts = torch.unique(self.shuffled_negative_edge_index, return_counts=True)
         self.shuffled_negative_edge_index = self.shuffled_negative_edge_index[:,counts==1]
-        self.shuffled_negative_edge_index = self.shuffled_negative_edge_index[:,np.random.permutation(self.shuffled_negative_edge_index.size(1))].to(self.device)
+        self.shuffled_negative_edge_index = self.shuffled_negative_edge_index[:,np.random.permutation(self.shuffled_negative_edge_index.size(1))]
         self.start_shuffled_negative_edge_index = 0
         print(f"data has been sent to {self.device}.")
 
@@ -538,10 +538,10 @@ class Link_Prediction_Model():
 
         for epoch in range(start_epoch+1, self.num_epochs+1):
             if (self.shuffled_negative_edge_index.size(1)-self.start_shuffled_negative_edge_index)<=self.num_negative_samples:
-                shuffled_negative_edge_index = torch.cat([torch.Tensor(np.array(list(itertools.combinations(range(self.data.num_nodes), 2))).T), self.edge_index_for_negative_sampling], dim=-1)
+                shuffled_negative_edge_index = torch.cat([torch.Tensor(np.array(list(itertools.combinations(range(self.data.num_nodes), 2))).T).to(self.device), self.edge_index_for_negative_sampling], dim=-1)
                 shuffled_negative_edge_index, counts = torch.unique(shuffled_negative_edge_index, return_counts=True)
                 shuffled_negative_edge_index = shuffled_negative_edge_index[:,counts==1]
-                shuffled_negative_edge_index = shuffled_negative_edge_index[:,np.random.permutation(shuffled_negative_edge_index.size(1))].to(self.device)
+                shuffled_negative_edge_index = shuffled_negative_edge_index[:,np.random.permutation(shuffled_negative_edge_index.size(1))]
 
                 self.shuffled_negative_edge_index = torch.cat([self.shuffled_negative_edge_index[:,self.start_shuffled_negative_edge_index:], shuffled_negative_edge_index[:,np.random.permutation(shuffled_negative_edge_index.size(1))]], dim=-1)
                 self.start_shuffled_negative_edge_index = 0
