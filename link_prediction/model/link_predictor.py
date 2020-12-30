@@ -119,7 +119,9 @@ class Link_Prediction_Model():
         self.mask = self.mask.to(self.device)
         self.edge_index_for_negative_sampling = torch.cat([self.data.train_pos_edge_index, self.data.test_neg_edge_index, self.data.test_pos_edge_index, self.data.val_neg_edge_index, self.data.val_pos_edge_index], dim = -1)
         self.num_neg_edges = self.data.num_nodes*(self.data.num_nodes-1)/2 - self.data.train_pos_edge_index.size(1)
-
+        
+        self.shuffled_edge_index_for_negative_sampling = self.edge_index_for_negative_sampling[:,np.random.permutation(self.edge_index_for_negative_sampling.size(1))]
+        self.start_shuffled_edge_index_for_negative_sampling = 0
         print(f"data has been sent to {self.device}.")
 
     def __call__(self, 
@@ -138,7 +140,6 @@ class Link_Prediction_Model():
                 shared_weights = True, 
                 dropout = 0.0,
                 negative_sampling_ratio = None,
-                recursive_negative_sampling_ratio = None,
                 threshold = 0.5):
         '''
         modelを指定する.
@@ -282,17 +283,11 @@ class Link_Prediction_Model():
         self.sigmoid_bias = sigmoid_bias
         self.threshold = threshold
         self.negative_sampling_ratio = negative_sampling_ratio
-        self.recursive_negative_sampling_ratio = recursive_negative_sampling_ratio
 
         if negative_sampling_ratio is None:
             self.num_negative_samples = None
         else:
             self.num_negative_samples = int(self.negative_sampling_ratio * self.data.train_pos_edge_index.size(1))
-
-            if recursive_negative_sampling_ratio is None:
-                self.num_recursive_negative_samplings = None
-            else:
-                self.num_recursive_negative_samplings = int(self.recursive_negative_sampling_ratio * self.num_negative_samples)
 
         self.num_epochs = 0
         self.best_epoch = 0
@@ -395,27 +390,15 @@ class Link_Prediction_Model():
             for optimizer in self.optimizer.values():
                 optimizer.zero_grad()
 
-            if self.recursive_negative_sampling_ratio is not None:
-                if self.incorrect_edge_index.size(1)>self.num_negative_samples//2:
-                    sampled_incorrect_edge_index = self.incorrect_edge_index[:,random.sample(range(self.incorrect_edge_index.size(1)), self.num_recursive_negative_samplings)]
-                else:
-                    sampled_incorrect_edge_index = self.incorrect_edge_index
+            # neg_edge_index = negative_sampling(
+            #     edge_index = self.edge_index_for_negative_sampling,
+            #     num_nodes = self.data.num_nodes,
+            #     num_neg_samples = self.num_negative_samples
+            # )
+        
+            neg_edge_index = self.shuffled_edge_index_for_negative_sampling[:,self.start_shuffled_edge_index_for_negative_sampling:self.start_shuffled_edge_index_for_negative_sampling+self.num_negative_samples]
+            self.start_shuffled_edge_index_for_negative_sampling += self.num_negative_samples
 
-                neg_edge_index = negative_sampling(
-                    edge_index = self.edge_index_for_negative_sampling,
-                    num_nodes = self.data.num_nodes,
-                    num_neg_samples = self.num_negative_samples-sampled_incorrect_edge_index.size(1)
-                )
-
-                neg_edge_index = torch.cat([neg_edge_index, sampled_incorrect_edge_index], dim = -1)
-                neg_edge_index = torch.unique(neg_edge_index, sorted=False, dim=-1)
-
-            else:
-                neg_edge_index = negative_sampling(
-                    edge_index = self.edge_index_for_negative_sampling,
-                    num_nodes = self.data.num_nodes,
-                    num_neg_samples = self.num_negative_samples
-                )
 
             edge_index = torch.cat([self.data.train_pos_edge_index, neg_edge_index], dim = -1)
             self.train_edge_index = edge_index
@@ -550,6 +533,10 @@ class Link_Prediction_Model():
         self.incorrect_edge_index = torch.zeros(2,0).to(self.device)
 
         for epoch in range(start_epoch+1, self.num_epochs+1):
+            if (self.shuffled_edge_index_for_negative_sampling.size(1)-self.start_shuffled_edge_index_for_negative_sampling)<self.num_negative_samples:
+                self.shuffled_edge_index_for_negative_sampling = torch.cat([self.shuffled_edge_index_for_negative_sampling[:,self.start_shuffled_edge_index_for_negative_sampling:], self.edge_index_for_negative_sampling[:,np.random.permutation(self.edge_index_for_negative_sampling.size(1))]], dim=-1)
+                self.start_shuffled_edge_index_for_negative_sampling = 0
+
             train_loss, train_link_labels, train_link_probs, _ = self.train()
             val_loss, val_link_labels, val_link_probs = self.val()
             test_loss, test_link_labels, test_link_probs = self.test()
