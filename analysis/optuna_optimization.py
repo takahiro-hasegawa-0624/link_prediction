@@ -84,6 +84,7 @@ def main():
     parser.add_argument('--lins_convs_gamma_max', type=float, default=1.0)
     parser.add_argument('--lins_convs_step_size', type=int, default=2)
     parser.add_argument('--lins_convs_scheduler', type=int, default=0)
+    parser.add_argument('--save_study', type=int, default=1)
 
     args = parser.parse_args()
 
@@ -93,11 +94,14 @@ def main():
 
     study_name = f'{args.encode_model}_{args.decode_model}_{args.activation}_{args.num_epochs}_{args.lins_convs_scheduler}'
 
-    study = optuna.create_study(
-        study_name=study_name,
-        storage='sqlite:///optuna_study.db',
-        load_if_exists=True
-    )
+    if args.save_study==1:
+        study = optuna.create_study(
+            study_name=study_name,
+            storage='sqlite:///optuna_study.db',
+            load_if_exists=True
+        )
+    else:
+        study = optuna.create_study()
 
     study.optimize(run_objective(args=args, model=model), timeout=args.timeout)
 

@@ -534,7 +534,7 @@ class Link_Prediction_Model():
         if not os.path.isdir(self.path_last_model):
             os.makedirs(self.path_last_model)
 
-        self.incorrect_edge_index = torch.zeros(2,0).to(self.device)
+        # self.incorrect_edge_index = torch.zeros(2,0).to(self.device)
 
         for epoch in range(start_epoch+1, self.num_epochs+1):
             # if (self.shuffled_negative_edge_index.size(1)-self.start_shuffled_negative_edge_index)<=self.num_negative_samples:
@@ -550,8 +550,8 @@ class Link_Prediction_Model():
             val_loss, val_link_labels, val_link_probs = self.val()
             test_loss, test_link_labels, test_link_probs = self.test()
 
-            pred_flag = train_link_probs>self.threshold
-            self.incorrect_edge_index = self.train_edge_index[:,train_link_labels != pred_flag]
+            # pred_flag = train_link_probs>self.threshold
+            # self.incorrect_edge_index = self.train_edge_index[:,train_link_labels != pred_flag]
 
             if self.sigmoid_bias is True:
                 bias = float(self.decode_model.state_dict()['bias.0.bias'].cpu().detach().clone())

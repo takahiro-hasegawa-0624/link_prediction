@@ -32,7 +32,7 @@ def main():
     parser.add_argument('--lr_bias_split', type=int, default=6)
     parser.add_argument('--bias_gamma_min', type=float, default=0.99)
     parser.add_argument('--bias_gamma_max', type=float, default=0.994)
-    parser.add_argument('--bias_gamma_split', type=int, default=4)
+    parser.add_argument('--bias_gamma_split', type=int, default=2)
 
     args = parser.parse_args()
 
