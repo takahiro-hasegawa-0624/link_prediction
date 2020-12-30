@@ -526,7 +526,8 @@ class Link_Prediction_Model():
         if not os.path.isdir(self.path_last_model):
             os.makedirs(self.path_last_model)
 
-        self.incorrect_edge_index = torch.zeros(2,0)
+        self.incorrect_edge_index = torch.zeros(2,0).to(self.device)
+
         for epoch in range(start_epoch+1, self.num_epochs+1):
             train_loss, train_link_labels, train_link_probs, _ = self.train()
             val_loss, val_link_labels, val_link_probs = self.val()
