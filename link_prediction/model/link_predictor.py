@@ -588,7 +588,7 @@ class Link_Prediction_Model():
                 self.best_epoch = epoch
 
                 if print_log is False:
-                    print(f'Best Epoch: {self.best_epoch}, Best Val Score{self.best_epoch}')
+                    print(f'Best Epoch: {self.best_epoch}, Best Val Score: {self.best_epoch}, Test Score: {test_auc}')
                 with open(f"{self.path_best_model}/best_model.pkl", 'wb') as f:
                     cloudpickle.dump(self.decode_model, f)
 
