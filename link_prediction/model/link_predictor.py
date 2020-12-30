@@ -388,7 +388,7 @@ class Link_Prediction_Model():
             for optimizer in self.optimizer.values():
                 optimizer.zero_grad()
 
-            if self.incorrect_edge_index.size(1)>self.num_negative_samples//2):
+            if self.incorrect_edge_index.size(1)>self.num_negative_samples//2:
                 sampled_incorrect_edge_index = self.incorrect_edge_index[:,random.sample(range(self.incorrect_edge_index.size(1)), self.num_negative_samples//2)]
             else:
                 sampled_incorrect_edge_index = self.incorrect_edge_index
