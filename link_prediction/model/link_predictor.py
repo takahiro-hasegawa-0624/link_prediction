@@ -388,12 +388,17 @@ class Link_Prediction_Model():
             for optimizer in self.optimizer.values():
                 optimizer.zero_grad()
 
+            if self.incorrect_edge_index.size(1)>self.num_negative_samples//2):
+                sampled_incorrect_edge_index = self.incorrect_edge_index[:,random.sample(range(self.incorrect_edge_index.size(1)), self.num_negative_samples//2)]
+            else:
+                sampled_incorrect_edge_index = self.incorrect_edge_index
+
             neg_edge_index = negative_sampling(
                 edge_index = self.edge_index_for_negative_sampling,
                 num_nodes = self.data.num_nodes,
-                num_neg_samples = self.num_negative_samples)
+                num_neg_samples = self.num_negative_samples-sampled_incorrect_edge_index.size(1))
 
-            neg_edge_index = torch.cat([neg_edge_index, self.incorrect_edge_index], dim = -1)
+            neg_edge_index = torch.cat([neg_edge_index, sampled_incorrect_edge_index], dim = -1)
             neg_edge_index = torch.unique(neg_edge_index, sorted=False, dim=-1)
 
             edge_index = torch.cat([self.data.train_pos_edge_index, neg_edge_index], dim = -1)
