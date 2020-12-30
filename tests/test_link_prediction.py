@@ -19,6 +19,7 @@ def main():
     parser.add_argument('--num_layers', type=int, default=32)
     parser.add_argument('--jk_mode', type=str, default='max')
     parser.add_argument('--negative_sampling_ratio', type=int, default=1)
+    parser.add_argument('--recursive_negative_sampling_ratio', type=int, default=None)
     parser.add_argument('--weight_decay', type=float, default=1e-10)
     parser.add_argument('--weight_decay_bias', type=float, default=1e-3)
     parser.add_argument('--lr', type=float, default=1e-1)
@@ -47,6 +48,7 @@ def main():
         dropout = 0.5,
         sigmoid_bias = True,
         negative_sampling_ratio = args.negative_sampling_ratio,
+        recursive_negative_sampling_ratio = args.recursive_negative_sampling_ratio,
         threshold = 0.5
     )
 

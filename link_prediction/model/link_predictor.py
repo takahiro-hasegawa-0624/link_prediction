@@ -138,6 +138,7 @@ class Link_Prediction_Model():
                 shared_weights = True, 
                 dropout = 0.0,
                 negative_sampling_ratio = None,
+                recursive_negative_sampling_ratio = None,
                 threshold = 0.5):
         '''
         modelを指定する.
@@ -281,11 +282,17 @@ class Link_Prediction_Model():
         self.sigmoid_bias = sigmoid_bias
         self.threshold = threshold
         self.negative_sampling_ratio = negative_sampling_ratio
+        self.recursive_negative_sampling_ratio = recursive_negative_sampling_ratio
 
         if negative_sampling_ratio is None:
             self.num_negative_samples = None
         else:
-            self.num_negative_samples = self.negative_sampling_ratio * self.data.train_pos_edge_index.size(1)
+            self.num_negative_samples = int(self.negative_sampling_ratio * self.data.train_pos_edge_index.size(1))
+
+            if recursive_negative_sampling_ratio is None:
+                self.num_recursive_negative_samplings = None
+            else:
+                self.num_recursive_negative_samplings = int(self.recursive_negative_sampling_ratio * self.num_negative_samples)
 
         self.num_epochs = 0
         self.best_epoch = 0
@@ -388,18 +395,25 @@ class Link_Prediction_Model():
             for optimizer in self.optimizer.values():
                 optimizer.zero_grad()
 
-            if self.incorrect_edge_index.size(1)>self.num_negative_samples//2:
-                sampled_incorrect_edge_index = self.incorrect_edge_index[:,random.sample(range(self.incorrect_edge_index.size(1)), self.num_negative_samples//2)]
+            if self.recursive_negative_sampling_ratio is not None:
+                if self.incorrect_edge_index.size(1)>self.num_negative_samples//2:
+                    sampled_incorrect_edge_index = self.incorrect_edge_index[:,random.sample(range(self.incorrect_edge_index.size(1)), self.num_recursive_negative_samplings)]
+                else:
+                    sampled_incorrect_edge_index = self.incorrect_edge_index
+
+                neg_edge_index = negative_sampling(
+                    edge_index = self.edge_index_for_negative_sampling,
+                    num_nodes = self.data.num_nodes,
+                    num_neg_samples = self.num_negative_samples-sampled_incorrect_edge_index.size(1))
+
+                neg_edge_index = torch.cat([neg_edge_index, sampled_incorrect_edge_index], dim = -1)
+                neg_edge_index = torch.unique(neg_edge_index, sorted=False, dim=-1)
+
             else:
-                sampled_incorrect_edge_index = self.incorrect_edge_index
-
-            neg_edge_index = negative_sampling(
-                edge_index = self.edge_index_for_negative_sampling,
-                num_nodes = self.data.num_nodes,
-                num_neg_samples = self.num_negative_samples-sampled_incorrect_edge_index.size(1))
-
-            neg_edge_index = torch.cat([neg_edge_index, sampled_incorrect_edge_index], dim = -1)
-            neg_edge_index = torch.unique(neg_edge_index, sorted=False, dim=-1)
+                neg_edge_index = negative_sampling(
+                    edge_index = self.edge_index_for_negative_sampling,
+                    num_nodes = self.data.num_nodes,
+                    num_neg_samples = self.num_negative_samples-sampled_incorrect_edge_index.size(1))
 
             edge_index = torch.cat([self.data.train_pos_edge_index, neg_edge_index], dim = -1)
             self.train_edge_index = edge_index
