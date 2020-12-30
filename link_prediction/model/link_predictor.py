@@ -511,13 +511,14 @@ class Link_Prediction_Model():
 
         self.start_time = datetime.datetime.now()
 
-        self.base_path = save_dir + f"/output/{self.dataset_name}/{self.encode_modelname}/{self.decode_modelname}/activation_{self.activation}/sigmoidbias_{'True' if self.sigmoid_bias is True else 'False'}/numlayers_{self.num_layers}/negative_sampling_ratio_{self.negative_sampling_ratio}/epochs_{self.num_epochs}/{self.start_time.strftime('%Y%m%d_%H%M')}"
+        self.base_dir = save_dir
+        self.save_dir = f"{self.base_dir}/output/{self.dataset_name}/{self.encode_modelname}/{self.decode_modelname}/activation_{self.activation}/sigmoidbias_{'True' if self.sigmoid_bias is True else 'False'}/numlayers_{self.num_layers}/negative_sampling_ratio_{self.negative_sampling_ratio}/epochs_{self.num_epochs}/{self.start_time.strftime('%Y%m%d_%H%M')}"
 
-        self.path_best_model = self.base_path + f"/usebestmodel_True"
+        self.path_best_model = self.save_dir + f"/usebestmodel_True"
         if not os.path.isdir(self.path_best_model):
             os.makedirs(self.path_best_model)
 
-        self.path_last_model = self.base_path + f"/usebestmodel_False"
+        self.path_last_model = self.save_dir + f"/usebestmodel_False"
         if not os.path.isdir(self.path_last_model):
             os.makedirs(self.path_last_model)
 
@@ -610,26 +611,36 @@ class Link_Prediction_Model():
         inner_product = np.dot(z_normalized, z_normalized.T)
 
         if validation is True:
-            # y_pred = self.decode_model.encode_decode(self.data.x).detach().clone().numpy().flatten()
+            pos_edge_index = self.data['val_pos_edge_index']
+            neg_edge_index = self.data['val_neg_edge_index']
+            edge_index = torch.cat([pos_edge_index, neg_edge_index], dim = -1)
+            val_link_probs = self.best_decode_model.encode_decode(self.data.x).cpu().detach().clone()[edge_index.cpu().numpy()].cpu()
+            val_link_labels = my_utils.get_link_labels(pos_edge_index, neg_edge_index).cpu()
 
             pos_edge_index = self.data['test_pos_edge_index']
             neg_edge_index = self.data['test_neg_edge_index']
             edge_index = torch.cat([pos_edge_index, neg_edge_index], dim = -1)
-
             test_link_probs = self.best_decode_model.encode_decode(self.data.x).cpu().detach().clone()[edge_index.cpu().numpy()].cpu()
             test_link_labels = my_utils.get_link_labels(pos_edge_index, neg_edge_index).cpu()
 
         else:
-            # y_pred = self.best_model.encode_decode(self.data.x).detach().clone().numpy().flatten()
+            pos_edge_index = self.data['val_pos_edge_index']
+            neg_edge_index = self.data['val_neg_edge_index']
+            edge_index = torch.cat([pos_edge_index, neg_edge_index], dim = -1)
+            val_link_probs = self.decode_model.encode_decode(self.data.x).cpu().detach().clone()[edge_index.cpu().numpy()].cpu()
+            val_link_labels = my_utils.get_link_labels(pos_edge_index, neg_edge_index).cpu()
+
             pos_edge_index = self.data['test_pos_edge_index']
             neg_edge_index = self.data['test_neg_edge_index']
             edge_index = torch.cat([pos_edge_index, neg_edge_index], dim = -1)
-
             test_link_probs = self.decode_model.encode_decode(self.data.x).cpu().detach().clone()[edge_index.cpu().numpy()].cpu()
             test_link_labels = my_utils.get_link_labels(pos_edge_index, neg_edge_index).cpu()
 
-        fpr, tpr, _ = roc_curve(test_link_labels, test_link_probs)
-        auc = roc_auc_score(test_link_labels, test_link_probs)
+        val_fpr, val_tpr, _ = roc_curve(val_link_labels, val_link_probs)
+        val_auc = roc_auc_score(val_link_labels, val_link_probs)
+
+        test_fpr, test_tpr, _ = roc_curve(test_link_labels, test_link_probs)
+        test_auc = roc_auc_score(test_link_labels, test_link_probs)
 
         # lossの図示
         fig, ax = plt.subplots(figsize=(10, 5), dpi=150)
@@ -687,10 +698,12 @@ class Link_Prediction_Model():
 
         # ROC曲線の図示
         fig, ax = plt.subplots(figsize=(10, 10), dpi=150)
-        ax.plot(fpr, tpr)
+        ax.plot(val_fpr, val_tpr, lavel=f'validation AUC={round(val_auc, 3)}')
+        ax.plot(test_fpr, test_tpr, lavel=f'test AUC={round(test_auc, 3)}')
+        ax.legend()
         ax.set_xlabel('FPR: False positive rate')
         ax.set_ylabel('TPR: True positive rate')
-        ax.set_title(f"AUC = {round(auc, 3)} ({self.encode_modelname} / {self.decode_modelname} / activation_{self.activation} / layers_{self.num_layers})")
+        ax.set_title(f"AUC ({self.encode_modelname} / {self.decode_modelname} / activation_{self.activation} / layers_{self.num_layers})")
         ax.grid()
         if save:
             fig.savefig(path+'/roc.png')
@@ -778,20 +791,31 @@ class Link_Prediction_Model():
         #     plt.close()
 
         # 混合行列
-        c_matrix = confusion_matrix(test_link_labels, (test_link_probs>self.threshold))
-        c_matrix_str = f'TP_{c_matrix[1,1]}_FP_{c_matrix[0,1]}_TN_{c_matrix[0,0]}_FN_{c_matrix[1,0]}'
+        val_c_matrix = confusion_matrix(val_link_labels, (val_link_probs>self.threshold))
+        val_c_matrix_str = f'val_c_matrix: TP_{val_c_matrix[1,1]}_FP_{val_c_matrix[0,1]}_TN_{val_c_matrix[0,0]}_FN_{val_c_matrix[1,0]}'
+
+        test_c_matrix = confusion_matrix(test_link_labels, (test_link_probs>self.threshold))
+        test_c_matrix_str = f'test_c_matrix: TP_{test_c_matrix[1,1]}_FP_{test_c_matrix[0,1]}_TN_{test_c_matrix[0,0]}_FN_{test_c_matrix[1,0]}'
 
         # logの出力
-        print(f'AUC: {auc}')
-        print(c_matrix_str)
-        print(f'accuracy: {(c_matrix[1,1]+c_matrix[0,0])/c_matrix.sum().sum()}')
-        print(f'precision: {c_matrix[1,1]/(c_matrix[1,1]+c_matrix[0,1])}')
-        print(f'recall: {c_matrix[1,1]/(c_matrix[1,1]+c_matrix[1,0])}')
+        print('#####val#####')
+        print(f'AUC: {val_auc}')
+        print(val_c_matrix_str)
+        print(f'accuracy: {(val_c_matrix[1,1]+val_c_matrix[0,0])/val_c_matrix.sum().sum()}')
+        print(f'precision: {val_c_matrix[1,1]/(val_c_matrix[1,1]+val_c_matrix[0,1])}')
+        print(f'recall: {val_c_matrix[1,1]/(val_c_matrix[1,1]+val_c_matrix[1,0])}')
+
+        print('#####test#####')
+        print(f'AUC: {test_auc}')
+        print(test_c_matrix_str)
+        print(f'accuracy: {(test_c_matrix[1,1]+test_c_matrix[0,0])/test_c_matrix.sum().sum()}')
+        print(f'precision: {test_c_matrix[1,1]/(test_c_matrix[1,1]+test_c_matrix[0,1])}')
+        print(f'recall: {test_c_matrix[1,1]/(test_c_matrix[1,1]+test_c_matrix[1,0])}')
         
         attr = 'Attributes:\n'
         for key, value in self.__dict__.items():
             attr += f'{key}:\n{value}\n\n'
-        text = f'{self.encode_model}\n\n{self.decode_model}\n\n{attr}{c_matrix_str}\n\nAUC_{auc}'
+        text = f'{self.encode_model}\n\n{self.decode_model}\n\n{attr}{val_c_matrix_str}\n\nval_AUC_{val_auc}\n\n{test_c_matrix_str}\n\ntest_AUC_{test_auc}'
 
         if save:
             with open(path+'/log.txt', mode='w') as f:
@@ -799,10 +823,10 @@ class Link_Prediction_Model():
 
         if save is False:
             # delete directories to save outputs
-            shutil.rmtree(self.base_path)
+            shutil.rmtree(self.save_dir)
 
         # 結果集約csvの作成
-        path_csv = './output/summary.csv'
+        path_csv = f'{self.base_dir}/output/summary.csv'
         if os.path.isfile(path_csv):
             self.summary = pd.read_csv(path_csv)
 
@@ -833,14 +857,22 @@ class Link_Prediction_Model():
                 'num_epochs', 
                 'validation',
                 'best_epoch', 
-                'auc', 
-                'true_positive', 
-                'false_positive', 
-                'true_negative', 
-                'false_negative', 
-                'accuracy', 
-                'precision', 
-                'recall', 
+                'val_auc', 
+                'val_true_positive', 
+                'val_false_positive', 
+                'val_true_negative', 
+                'val_false_negative', 
+                'val_accuracy', 
+                'val_precision', 
+                'val_recall', 
+                'test_auc', 
+                'test_true_positive', 
+                'test_false_positive', 
+                'test_true_negative', 
+                'test_false_negative', 
+                'test_accuracy', 
+                'test_precision', 
+                'test_recall', 
                 'path'
             ])
 
@@ -892,14 +924,22 @@ class Link_Prediction_Model():
             log_dic['best_epoch'] = self.best_epoch
         else:
             log_dic['best_epoch'] = None
-        log_dic['auc'] = auc
-        log_dic['true_positive'] = c_matrix[1,1]
-        log_dic['false_positive'] = c_matrix[0,1]
-        log_dic['true_negative'] = c_matrix[0,0]
-        log_dic['false_negative'] = c_matrix[1,0]
-        log_dic['accuracy'] = (c_matrix[1,1]+c_matrix[0,0])/c_matrix.sum().sum()
-        log_dic['precision'] = c_matrix[1,1]/(c_matrix[1,1]+c_matrix[0,1])
-        log_dic['recall'] = c_matrix[1,1]/(c_matrix[1,1]+c_matrix[1,0])
+        log_dic['val_auc'] = val_auc
+        log_dic['val_true_positive'] = val_c_matrix[1,1]
+        log_dic['val_false_positive'] = val_c_matrix[0,1]
+        log_dic['val_true_negative'] = val_c_matrix[0,0]
+        log_dic['val_false_negative'] = val_c_matrix[1,0]
+        log_dic['val_accuracy'] = (val_c_matrix[1,1]+val_c_matrix[0,0])/val_c_matrix.sum().sum()
+        log_dic['val_precision'] = val_c_matrix[1,1]/(val_c_matrix[1,1]+val_c_matrix[0,1])
+        log_dic['val_recall'] = val_c_matrix[1,1]/(val_c_matrix[1,1]+val_c_matrix[1,0])
+        log_dic['test_auc'] = test_auc
+        log_dic['test_true_positive'] = test_c_matrix[1,1]
+        log_dic['test_false_positive'] = test_c_matrix[0,1]
+        log_dic['test_true_negative'] = test_c_matrix[0,0]
+        log_dic['test_false_negative'] = test_c_matrix[1,0]
+        log_dic['test_accuracy'] = (test_c_matrix[1,1]+test_c_matrix[0,0])/test_c_matrix.sum().sum()
+        log_dic['test_precision'] = test_c_matrix[1,1]/(test_c_matrix[1,1]+test_c_matrix[0,1])
+        log_dic['test_recall'] = test_c_matrix[1,1]/(test_c_matrix[1,1]+test_c_matrix[1,0])
         log_dic['path'] = f"./output/{self.dataset_name}/{self.encode_modelname}/{self.decode_modelname}/activation_{self.activation}/sigmoidbias_{'True' if self.sigmoid_bias is True else 'False'}/numlayers_{self.num_layers}/negative_sampling_ratio_{self.negative_sampling_ratio}/epochs_{self.num_epochs}/{self.start_time.strftime('%Y%m%d_%H%M')}"
         self.summary = self.summary.append(pd.Series(log_dic), ignore_index=True)
         self.summary.to_csv(path_csv, index=False)
