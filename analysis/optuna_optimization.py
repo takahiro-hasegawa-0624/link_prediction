@@ -36,8 +36,20 @@ def get_scheduler(trial, model, args):
 
     return scheduler
 
+def get_gcnii_param(trial, args):
+    if args.encode_model == 'GCNII':
+        alpha = trial.suggest_uniform('gcnii_alpha', args.gcnii_alpha_min, args.gcnii_alpha_max)
+        theta = trial.suggest_uniform('gcnii_theta', args.gcnii_theta_min, args.gcnii_theta_max)
+    else:
+        alpha = None
+        theta = None
+
+    return alpha, theta
+
 def run_objective(args, model):
     def objective(trial):
+        alpha, theta = get_gcnii_param(trial, args)
+
         model(
             encode_modelname=args.encode_model, 
             decode_modelname=args.decode_model, 
@@ -49,7 +61,9 @@ def run_objective(args, model):
             dropout = 0.5,
             sigmoid_bias = True,
             negative_sampling_ratio = 1,
-            threshold = 0.5
+            threshold = 0.5,
+            alpha = alpha,
+            theta = theta
         )
         
         model.my_optimizer(get_optimizer(trial=trial, model=model, args=args))
@@ -71,7 +85,7 @@ def main():
     parser.add_argument('--timeout', type=int, default=60*60*12)
     parser.add_argument('--num_epochs', type=int, default=1000)
     parser.add_argument('--weight_decay_min', type=float, default=1e-12)
-    parser.add_argument('--weight_decay_max', type=float, default=1e-2)
+    parser.add_argument('--weight_decay_max', type=float, default=1e-8)
     parser.add_argument('--weight_decat_bias_min', type=float, default=1e-5)
     parser.add_argument('--weight_decat_bias_max', type=float, default=1e-1)
     parser.add_argument('--lr_min', type=float, default=1e-3)
@@ -84,6 +98,10 @@ def main():
     parser.add_argument('--lins_convs_gamma_max', type=float, default=1.0)
     parser.add_argument('--lins_convs_step_size', type=int, default=2)
     parser.add_argument('--lins_convs_scheduler', type=int, default=0)
+    parser.add_argument('--gcnii_alpha_min', type=float, default=0.05)
+    parser.add_argument('--gcnii_alpha_max', type=float, default=0.5)
+    parser.add_argument('--gcnii_theta_min', type=float, default=0.1)
+    parser.add_argument('--gcnii_theta_max', type=float, default=1.5)
     parser.add_argument('--save_study', type=int, default=1)
 
     args = parser.parse_args()
