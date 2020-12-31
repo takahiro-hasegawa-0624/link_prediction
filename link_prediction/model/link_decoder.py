@@ -20,9 +20,9 @@ class Bias(torch.nn.Module):
     Attributes:
         bias (torch.nn.Parameter[1]): scalar bias
     '''
-    def __init__(self):
+    def __init__(self, initial_value=-2.0):
         super(Bias, self).__init__()
-        self.bias = torch.nn.Parameter(torch.zeros(1))
+        self.bias = torch.nn.Parameter(torch.Tensor([initial_value]))
 
     def forward(self, x):
         x = x + self.bias.expand(x.size())
