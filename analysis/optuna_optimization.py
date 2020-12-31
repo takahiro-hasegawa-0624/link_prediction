@@ -123,6 +123,13 @@ def main():
 
     study.optimize(run_objective(args=args, model=model), timeout=args.timeout)
 
+    if args.encode_model == 'GCNII':
+        alpha = study.best_params['gcnii_alpha']
+        theta = study.best_params['gcnii_theta']
+    else:
+        alpha = None
+        theta = None
+
     model(
         encode_modelname=args.encode_model, 
         decode_modelname=args.decode_model, 
@@ -134,7 +141,9 @@ def main():
         dropout = 0.5,
         sigmoid_bias = True,
         negative_sampling_ratio = 1,
-        threshold = 0.5
+        threshold = 0.5,
+        alpha=alpha,
+        theta=theta
     )
 
     optimizer = {}
