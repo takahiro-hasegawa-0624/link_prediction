@@ -29,7 +29,7 @@ from torch_sparse import SparseTensor
 from torch_geometric.utils import negative_sampling
 
 from link_prediction.model.node_encoder import NN, GCN, GCNII, GCNIIwithJK
-from link_prediction.model.link_decoder import GAE, VGAE, Cat_Linear_Encoder
+from link_prediction.model.link_decoder import GAE, VGAE, Cat_Linear_Decoder
 from link_prediction.my_util import my_utils
 
 class Link_Prediction_Model():
