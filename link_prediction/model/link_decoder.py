@@ -53,7 +53,8 @@ class GAE(torch.nn.Module):
         self.encoder = encoder
         self.self_loop_mask = self_loop_mask
         self.sigmoid_bias = sigmoid_bias
-
+        
+        self.lins = torch.nn.ModuleList()
         self.bias = torch.nn.ModuleList()
         self.bias.append(Bias(initial_value=sigmoid_bias_initial_value))
 
