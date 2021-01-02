@@ -66,7 +66,7 @@ class GAE(torch.nn.Module):
         '''
         return self.encoder(*args, **kwargs)
 
-    def decode(self, z, edge_index=None):
+    def decode(self, z, decode_edge_index=None):
         '''
         gets link probabilities from the outputs of the encode model
 
@@ -87,12 +87,12 @@ class GAE(torch.nn.Module):
             else:
                 probs = torch.sigmoid(torch.mm(z, z.t()))
         
-        if edge_index is not None:
-            return probs[edge_index.cpu().numpy()]
+        if decode_edge_index is not None:
+            return probs[decode_edge_index.cpu().numpy()]
         else:
             return probs.flatten()
 
-    def encode_decode(self, edge_index=None, *args, **kwargs):
+    def encode_decode(self, decode_edge_index=None, *args, **kwargs):
         '''
         runs the encoder, computes node-wise latent variables, and gets link probabilities.
 
@@ -100,7 +100,7 @@ class GAE(torch.nn.Module):
             probs (torch.tensor[num_edges, num_edges]: adjacency matrix of link probabilities.
         '''
         z = self.encode(*args, **kwargs)
-        return self.decode(z, edge_index)
+        return self.decode(z, decode_edge_index)
 
 class VGAE(GAE):
     r'''The Variational Graph Auto-Encoder model from the
@@ -182,10 +182,10 @@ class Cat_Linear_Decoder(torch.nn.Module):
 
         return self.encoder(*args, **kwargs)
 
-    def decode(self, z, edge_index=None):
-        if edge_index is not None:
-            z_i = z[torch.cat([edge_index[0], edge_index[1]], dim=-1)]
-            z_j = z[torch.cat([edge_index[1], edge_index[0]], dim=-1)]
+    def decode(self, z, decode_edge_index=None):
+        if decode_edge_index is not None:
+            z_i = z[torch.cat([decode_edge_index[0], decode_edge_index[1]], dim=-1)]
+            z_j = z[torch.cat([decode_edge_index[1], decode_edge_index[0]], dim=-1)]
             z_ij = torch.cat([z_i, z_j], dim=-1)
 
             for _ in range(z_ij.size(0)):
@@ -222,5 +222,5 @@ class Cat_Linear_Decoder(torch.nn.Module):
             return probs.flatten()
 
 
-    def encode_decode(self, edge_index, *args, **kwargs):
-        return self.decode(self.encoder(*args, **kwargs), edge_index)
+    def encode_decode(self, decode_edge_index, *args, **kwargs):
+        return self.decode(self.encoder(*args, **kwargs), decode_edge_index)

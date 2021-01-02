@@ -431,7 +431,7 @@ class Link_Prediction_Model():
             else:
                 z = self.decode_model.encode(self.data.x)
 
-            link_probs = self.decode_model.decode(z, edge_index)
+            link_probs = self.decode_model.decode(z, decode_edge_index = edge_index)
             if torch.isnan(link_probs).sum()>0:
                 print('np.nan occurred')
                 link_probs[torch.isnan(link_probs)]=1.0
@@ -478,7 +478,7 @@ class Link_Prediction_Model():
         if pos_edge_index.size(1)==0:
             return None, None, None
 
-        link_probs = self.decode_model.encode_decode(self.data.x, edge_index)
+        link_probs = self.decode_model.encode_decode(self.data.x, decode_edge_index = edge_index)
         if torch.isnan(link_probs).sum()>0:
             print('np.nan occurred')
             link_probs[torch.isnan(link_probs)]=1.0
@@ -511,7 +511,7 @@ class Link_Prediction_Model():
         neg_edge_index = self.data['test_neg_edge_index']
         edge_index = torch.cat([pos_edge_index, neg_edge_index], dim = -1)
 
-        link_probs = self.decode_model.encode_decode(self.data.x, edge_index)
+        link_probs = self.decode_model.encode_decode(self.data.x, decode_edge_index = edge_index)
         if torch.isnan(link_probs).sum()>0:
             print('np.nan occurred')
             link_probs[torch.isnan(link_probs)]=1.0
