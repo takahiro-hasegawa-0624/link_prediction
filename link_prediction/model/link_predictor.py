@@ -249,8 +249,8 @@ class Link_Prediction_Model():
                 sigmoid_bias_initial_value=sigmoid_bias_initial_value
             ).to(self.device)
 
-        elif self.decode_modelname == 'Cat_Linear_Encoder':
-            self.decode_model = Cat_Linear_Encoder(
+        elif self.decode_modelname == 'Cat_Linear_Decoder':
+            self.decode_model = Cat_Linear_Decoder(
                 encoder = self.encode_model, 
                 in_channels = num_hidden_channels, 
                 hidden_channels = num_hidden_channels//2, 

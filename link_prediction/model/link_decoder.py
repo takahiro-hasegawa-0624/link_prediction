@@ -156,13 +156,14 @@ class VGAE(GAE):
         return -0.5 * torch.mean(
             torch.sum(1 + 2 * logstd - mu**2 - logstd.exp()**2, dim=1))
 
-class Cat_Linear_Encoder(torch.nn.Module):
+class Cat_Linear_Decoder(torch.nn.Module):
     def __init__(self, encoder, in_channels, hidden_channels, out_channels=1, num_layers=2, dropout=0.5, self_loop_mask = True, sigmoid_bias_initial_value=-2.0):
         super(Cat_Linear_Encoder, self).__init__()
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         self.encoder = encoder
         self.self_loop_mask = self_loop_mask
+        self.sigmoid_bias = sigmoid_bias
 
         self.lins = torch.nn.ModuleList()
         self.lins.append(torch.nn.Linear(in_channels * 2, hidden_channels))
@@ -194,9 +195,10 @@ class Cat_Linear_Encoder(torch.nn.Module):
                     x = F.dropout(x, p=self.dropout, training=self.training)
                 x = self.lins[-1](x)
 
-            probs = torch.sigmoid(x)
-
-            return probs
+            if self.sigmoid_bias is True:
+                return torch.sigmoid(self.bias[0](x))
+            else:
+                return torch.sigmoid(x)
 
         else:
             probs = torch.zeros(0, z.size(0))
@@ -212,7 +214,10 @@ class Cat_Linear_Encoder(torch.nn.Module):
                         x = F.dropout(x, p=self.dropout, training=self.training)
                     x = self.lins[-1](x)
 
-                probs = torch.cat([probs, torch.sigmoid(x)], dim=0)
+                if self.sigmoid_bias is True:
+                    probs = torch.cat([probs, torch.sigmoid(self.bias[0](x))], dim=0)
+                else:
+                    probs = torch.cat([probs, torch.sigmoid(x)], dim=0)
 
             return probs
 
