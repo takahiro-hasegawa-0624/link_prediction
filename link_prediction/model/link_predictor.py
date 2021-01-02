@@ -133,6 +133,7 @@ class Link_Prediction_Model():
                 decode_modelname,
                 activation = None, 
                 sigmoid_bias = False,
+                sigmoid_bias_initial_value=-2.0,
                 self_loop_mask = False, 
                 num_hidden_channels = None, 
                 num_layers = None, 
@@ -236,14 +237,16 @@ class Link_Prediction_Model():
             self.decode_model = GAE(
                 encoder = self.encode_model,
                 self_loop_mask = self_loop_mask,
-                sigmoid_bias = sigmoid_bias
+                sigmoid_bias = sigmoid_bias,
+                sigmoid_bias_initial_value=sigmoid_bias_initial_value
             ).to(self.device)
 
         elif self.decode_modelname == 'VGAE':
             self.decode_model = VGAE(
                 encoder = self.encode_model,
                 self_loop_mask = self_loop_mask,
-                sigmoid_bias = sigmoid_bias
+                sigmoid_bias = sigmoid_bias,
+                sigmoid_bias_initial_value=sigmoid_bias_initial_value
             ).to(self.device)
 
         elif self.decode_modelname == 'Cat_Linear_Encoder':
@@ -254,7 +257,8 @@ class Link_Prediction_Model():
                 out_channels=1, 
                 num_layers=2, 
                 dropout=0.5, 
-                self_loop_mask = True
+                self_loop_mask = True,
+                sigmoid_bias_initial_value=sigmoid_bias_initial_value
             ).to(self.device)
 
         # optimizerはAdamをdefaultとする。self.my_optimizerで指定可能。
@@ -405,7 +409,6 @@ class Link_Prediction_Model():
 
 
             edge_index = torch.cat([self.data.train_pos_edge_index, neg_edge_index], dim = -1)
-            self.train_edge_index = edge_index
 
             if self.negative_injection is True:
                 (row, col), N, E = edge_index, self.data.num_nodes, edge_index.size(1)
@@ -427,7 +430,7 @@ class Link_Prediction_Model():
             else:
                 z = self.decode_model.encode(self.data.x)
 
-            link_probs = self.decode_model.decode(z)[edge_index.cpu().numpy()]
+            link_probs = self.decode_model.decode(z, edge_index.cpu().numpy())
             if torch.isnan(link_probs).sum()>0:
                 print('np.nan occurred')
                 link_probs[torch.isnan(link_probs)]=1.0
@@ -470,7 +473,7 @@ class Link_Prediction_Model():
         if pos_edge_index.size(1)==0:
             return None, None, None
 
-        link_probs = self.decode_model.encode_decode(self.data.x)[edge_index.cpu().numpy()]
+        link_probs = self.decode_model.encode_decode(self.data.x, edge_index.cpu().numpy())
         if torch.isnan(link_probs).sum()>0:
             print('np.nan occurred')
             link_probs[torch.isnan(link_probs)]=1.0
@@ -499,7 +502,7 @@ class Link_Prediction_Model():
         neg_edge_index = self.data['test_neg_edge_index']
         edge_index = torch.cat([pos_edge_index, neg_edge_index], dim = -1)
 
-        link_probs = self.decode_model.encode_decode(self.data.x)[edge_index.cpu().numpy()]
+        link_probs = self.decode_model.encode_decode(self.data.x, edge_index.cpu().numpy())
         if torch.isnan(link_probs).sum()>0:
             print('np.nan occurred')
             link_probs[torch.isnan(link_probs)]=1.0

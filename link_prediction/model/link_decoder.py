@@ -40,7 +40,7 @@ class GAE(torch.nn.Module):
         sigmoid_bias
         bias (torch.nn.ModuleList): list of sigmoid bias.
     '''   
-    def __init__(self, encoder, self_loop_mask = True, sigmoid_bias = False):
+    def __init__(self, encoder, self_loop_mask = True, sigmoid_bias = False, sigmoid_bias_initial_value=-2.0):
         '''
         Args:
             encoder
@@ -55,7 +55,7 @@ class GAE(torch.nn.Module):
         self.sigmoid_bias = sigmoid_bias
 
         self.bias = torch.nn.ModuleList()
-        self.bias.append(Bias())
+        self.bias.append(Bias(initial_value=sigmoid_bias_initial_value))
 
     def encode(self, *args, **kwargs):
         '''
@@ -66,7 +66,7 @@ class GAE(torch.nn.Module):
         '''
         return self.encoder(*args, **kwargs)
 
-    def decode(self, z):
+    def decode(self, z, edge_index=None):
         '''
         gets link probabilities from the outputs of the encode model
 
@@ -86,9 +86,13 @@ class GAE(torch.nn.Module):
                 probs = torch.sigmoid((torch.mm(z, z.t())) * (torch.eye(z.size(0))!=1).to(self.device))
             else:
                 probs = torch.sigmoid(torch.mm(z, z.t()))
-        return probs
+        
+        if edge_index is not None:
+            return probs[edge_index]
+        else:
+            return probs.flatten()
 
-    def encode_decode(self, *args, **kwargs):
+    def encode_decode(self, edge_index=None, *args, **kwargs):
         '''
         runs the encoder, computes node-wise latent variables, and gets link probabilities.
 
@@ -96,7 +100,7 @@ class GAE(torch.nn.Module):
             probs (torch.tensor[num_edges, num_edges]: adjacency matrix of link probabilities.
         '''
         z = self.encode(*args, **kwargs)
-        return self.decode(z)
+        return self.decode(z, edge_index)
 
 class VGAE(GAE):
     r'''The Variational Graph Auto-Encoder model from the
@@ -110,13 +114,13 @@ class VGAE(GAE):
             :class:`torch_geometric.nn.models.InnerProductDecoder`.
             (default: :obj:`None`)
     '''
-    def __init__(self, encoder, self_loop_mask = True, sigmoid_bias = False):
+    def __init__(self, encoder, self_loop_mask = True, sigmoid_bias = False, sigmoid_bias_initial_value=-2.0):
         super(VGAE, self).__init__(encoder, self_loop_mask, sigmoid_bias)
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.MAX_LOGSTD = 10
 
         self.bias = torch.nn.ModuleList()
-        self.bias.append(Bias())
+        self.bias.append(Bias(initial_value=sigmoid_bias_initial_value))
 
     def reparametrize(self, mu, logstd):
         if self.training:
@@ -153,7 +157,7 @@ class VGAE(GAE):
             torch.sum(1 + 2 * logstd - mu**2 - logstd.exp()**2, dim=1))
 
 class Cat_Linear_Encoder(torch.nn.Module):
-    def __init__(self, encoder, in_channels, hidden_channels, out_channels=1, num_layers=2, dropout=0.5, self_loop_mask = True):
+    def __init__(self, encoder, in_channels, hidden_channels, out_channels=1, num_layers=2, dropout=0.5, self_loop_mask = True, sigmoid_bias_initial_value=-2.0):
         super(Cat_Linear_Encoder, self).__init__()
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -167,7 +171,7 @@ class Cat_Linear_Encoder(torch.nn.Module):
         self.lins.append(torch.nn.Linear(hidden_channels, out_channels))
 
         self.bias = torch.nn.ModuleList()
-        self.bias.append(Bias())
+        self.bias.append(Bias(initial_value=sigmoid_bias_initial_value))
 
         self.dropout = dropout
 
@@ -177,28 +181,41 @@ class Cat_Linear_Encoder(torch.nn.Module):
 
         return self.encoder(*args, **kwargs)
 
-    def decode(self, z):
-        num_nodes = z.size(0)
+    def decode(self, z, edge_index=None):
+        if edge_index is not None:
+            z_i = z[torch.cat([edge_index[0], edge_index[1]], dim=-1)]
+            z_j = z[torch.cat([edge_index[1], edge_index[0]], dim=-1)]
+            z_ij = torch.cat([z_i, z_j], dim=-1)
 
-        adj = torch.zeros(num_nodes,num_nodes)
-        for i in range(num_nodes):
-            # x = torch.cat((z[i].expand(num_nodes, -1), z), axis=1)
-            for j in range(num_nodes):
-                x = torch.cat((z[i], z[j]), axis=0)
-
+            for _ in range(z_ij.size(0)):
                 for lin in self.lins[:-1]:
-                    x = lin(x)
+                    x = lin(z_ij)
                     x = F.relu(x)
                     x = F.dropout(x, p=self.dropout, training=self.training)
                 x = self.lins[-1](x)
-                # x = torch.reshape(x, (1, num_nodes))
-                adj[i][j] = x
 
-        if self.self_loop_mask is True:
-            probs = torch.sigmoid(x) * (torch.eye(z.size(0))!=1).to(self.device)
-        else:
             probs = torch.sigmoid(x)
-        return probs
 
-    def encode_decode(self, *args, **kwargs):
-        return self.decode(self.encoder(*args, **kwargs))
+            return probs
+
+        else:
+            probs = torch.zeros(0, z.size(0))
+
+            for i in range(z.size(0)):
+                z_i = z[[i]*z.size(0)]
+                z_ij = torch.cat([z_i, z], dim=-1)
+
+                for _ in range(z_ij.size(0)):
+                    for lin in self.lins[:-1]:
+                        x = lin(z_ij)
+                        x = F.relu(x)
+                        x = F.dropout(x, p=self.dropout, training=self.training)
+                    x = self.lins[-1](x)
+
+                probs = torch.cat([probs, torch.sigmoid(x)], dim=0)
+
+            return probs
+
+
+    def encode_decode(self, edge_index, *args, **kwargs):
+        return self.decode(self.encoder(*args, **kwargs), edge_index)
