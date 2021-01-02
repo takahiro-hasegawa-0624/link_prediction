@@ -440,8 +440,8 @@ class Link_Prediction_Model():
             weight = my_utils.get_loss_weight(self.data.train_pos_edge_index, neg_edge_index, self.negative_sampling_ratio).to(self.device)
 
             if self.decode_modelname == 'Cat_Linear_Decoder':
-                link_labels = torch.cat([link_labels, link_labels], dim=-1)
-                weight = torch.cat([weight, weight], dim=-1)
+                link_labels = torch.cat([link_labels, link_labels], dim=-1).flatten()
+                weight = torch.cat([weight, weight], dim=-1).flatten()
 
             loss = F.binary_cross_entropy(link_probs, link_labels, weight = weight)
             if self.decode_modelname == 'VGAE':
@@ -485,7 +485,7 @@ class Link_Prediction_Model():
         link_labels = my_utils.get_link_labels(pos_edge_index, neg_edge_index).to(self.device)
 
         if self.decode_modelname == 'Cat_Linear_Decoder':
-            link_labels = torch.cat([link_labels, link_labels], dim=-1)
+            link_labels = torch.cat([link_labels, link_labels], dim=-1).flatten()
 
         loss = F.binary_cross_entropy(link_probs, link_labels)
         if self.decode_modelname == 'VGAE':
@@ -518,7 +518,7 @@ class Link_Prediction_Model():
         link_labels = my_utils.get_link_labels(pos_edge_index, neg_edge_index).to(self.device)
 
         if self.decode_modelname == 'Cat_Linear_Decoder':
-            link_labels = torch.cat([link_labels, link_labels], dim=-1)
+            link_labels = torch.cat([link_labels, link_labels], dim=-1).flatten()
 
         loss = F.binary_cross_entropy(link_probs, link_labels)
         if self.decode_modelname == 'VGAE':

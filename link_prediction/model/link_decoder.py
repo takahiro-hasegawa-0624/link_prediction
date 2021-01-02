@@ -219,7 +219,7 @@ class Cat_Linear_Decoder(torch.nn.Module):
                 else:
                     probs = torch.cat([probs, torch.sigmoid(x)], dim=0)
 
-            return probs
+            return probs.flatten()
 
 
     def encode_decode(self, edge_index, *args, **kwargs):
