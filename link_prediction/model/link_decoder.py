@@ -196,9 +196,9 @@ class Cat_Linear_Decoder(torch.nn.Module):
                 x = self.lins[-1](x)
 
             if self.sigmoid_bias is True:
-                return torch.sigmoid(self.bias[0](x))
+                return torch.sigmoid(self.bias[0](x)).flatten()
             else:
-                return torch.sigmoid(x)
+                return torch.sigmoid(x).flatten()
 
         else:
             probs = torch.zeros(0, z.size(0))
