@@ -258,6 +258,7 @@ class Link_Prediction_Model():
                 num_layers=2, 
                 dropout=0.5, 
                 self_loop_mask = True,
+                sigmoid_bias = sigmoid_bias,
                 sigmoid_bias_initial_value=sigmoid_bias_initial_value
             ).to(self.device)
 
