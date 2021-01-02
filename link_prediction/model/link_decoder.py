@@ -88,7 +88,7 @@ class GAE(torch.nn.Module):
                 probs = torch.sigmoid(torch.mm(z, z.t()))
         
         if edge_index is not None:
-            return probs[edge_index]
+            return probs[edge_index.cpu().numpy()]
         else:
             return probs.flatten()
 
