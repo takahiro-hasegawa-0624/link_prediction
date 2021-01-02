@@ -158,7 +158,7 @@ class VGAE(GAE):
 
 class Cat_Linear_Decoder(torch.nn.Module):
     def __init__(self, encoder, in_channels, hidden_channels, out_channels=1, num_layers=2, dropout=0.5, self_loop_mask = True, sigmoid_bias_initial_value=-2.0):
-        super(Cat_Linear_Encoder, self).__init__()
+        super(Cat_Linear_Decoder, self).__init__()
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         self.encoder = encoder
