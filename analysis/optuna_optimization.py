@@ -10,27 +10,37 @@ import optuna
 import argparse
 
 def get_optimizer(trial, model, args):
+    optimizer = {}
+
     weight_decay = trial.suggest_loguniform('weight_decay', args.weight_decay_min, args.weight_decay_max)
     lr = trial.suggest_uniform('lr', args.lr_min, args.lr_max)
-    
-    weight_decay_bias = trial.suggest_loguniform('weight_decay_bias', args.weight_decat_bias_min, args.weight_decat_bias_max)
-    lr_bias = trial.suggest_uniform('lr_bias', args.lr_bias_min, args.lr_bias_max)
-    
-    optimizer = {}
-    optimizer['bias'] = torch.optim.Adam(model.decode_model.bias.parameters(), weight_decay=weight_decay_bias, lr=lr_bias)
     optimizer['convs'] = torch.optim.Adam(model.encode_model.convs.parameters(), weight_decay=weight_decay, lr=lr)
     optimizer['lins'] = torch.optim.Adam(model.encode_model.lins.parameters(), weight_decay=weight_decay, lr=lr)
+
+    if args.decode_model != 'Cat_Linear_Decoder':
+        weight_decay_bias = trial.suggest_loguniform('weight_decay_bias', args.weight_decay_bias_min, args.weight_decay_bias_max)
+        lr_bias = trial.suggest_uniform('lr_bias', args.lr_bias_min, args.lr_bias_max)
+        optimizer['bias'] = torch.optim.Adam(model.decode_model.bias.parameters(), weight_decay=weight_decay_bias, lr=lr_bias)
+
+    if args.decode_model == 'Cat_Linear_Decoder':
+        weight_decay_decoder = trial.suggest_loguniform('weight_decay_decoder', args.weight_decay_decoder_min, args.weight_decay_decoder_max)
+        lr_decoder = trial.suggest_uniform('lr_decoder', args.lr_decoder_min, args.lr_decoder_max)
+        optimizer['decoder_lins'] = torch.optim.Adam(model.decode_model.lins.parameters(), weight_decay=weight_decay_decoder, lr=lr_decoder)
     
     return optimizer
 
 def get_scheduler(trial, model, args):    
     scheduler = {}
-    bias_gamma = trial.suggest_uniform('bias_gamma', args.bias_gamma_min, args.bias_gamma_max)
-    if args.lins_convs_scheduler == 1:
-        lins_convs_gamma = trial.suggest_uniform('lins_convs_gamma', args.lins_convs_gamma_min, args.lins_convs_gamma_max)
-    scheduler['bias'] = torch.optim.lr_scheduler.ExponentialLR(model.optimizer['bias'], gamma=bias_gamma)
+    if args.decode_model != 'Cat_Linear_Decoder':
+        bias_gamma = trial.suggest_uniform('bias_gamma', args.bias_gamma_min, args.bias_gamma_max)
+        scheduler['bias'] = torch.optim.lr_scheduler.ExponentialLR(model.optimizer['bias'], gamma=bias_gamma)
+
+    if args.decode_model == 'Cat_Linear_Decoder':
+        decoder_gamma = trial.suggest_uniform('decoder_gamma', args.decoder_gamma_min, args.decoder_gamma_max)
+        scheduler['decoder_lins'] = torch.optim.lr_scheduler.ExponentialLR(model.optimizer['decoder_lins'], gamma=decoder_gamma)
 
     if args.lins_convs_scheduler == 1:
+        lins_convs_gamma = trial.suggest_uniform('lins_convs_gamma', args.lins_convs_gamma_min, args.lins_convs_gamma_max)
         scheduler['convs'] = torch.optim.lr_scheduler.StepLR(model.optimizer['convs'], step_size=args.lins_convs_step_size, gamma=lins_convs_gamma)
         scheduler['lins'] = torch.optim.lr_scheduler.StepLR(model.optimizer['lins'], step_size=args.lins_convs_step_size, gamma=lins_convs_gamma)
 
@@ -48,6 +58,7 @@ def get_gcnii_param(trial, args):
 
 def run_objective(args, model):
     def objective(trial):
+        sigmoid_bias = (args.decode_model != 'Cat_Linear_Decoder')
         alpha, theta = get_gcnii_param(trial, args)
 
         model(
@@ -59,7 +70,7 @@ def run_objective(args, model):
             num_layers = 32, 
             hidden_channels = None, 
             dropout = 0.5,
-            sigmoid_bias = True,
+            sigmoid_bias = sigmoid_bias,
             negative_sampling_ratio = 1,
             threshold = 0.5,
             alpha = alpha,
@@ -86,14 +97,20 @@ def main():
     parser.add_argument('--num_epochs', type=int, default=1000)
     parser.add_argument('--weight_decay_min', type=float, default=1e-12)
     parser.add_argument('--weight_decay_max', type=float, default=1e-8)
-    parser.add_argument('--weight_decat_bias_min', type=float, default=1e-5)
-    parser.add_argument('--weight_decat_bias_max', type=float, default=1e-1)
+    parser.add_argument('--weight_decay_bias_min', type=float, default=1e-5)
+    parser.add_argument('--weight_decay_bias_max', type=float, default=1e-1)
+    parser.add_argument('--weight_decay_decoder_min', type=float, default=1e-10)
+    parser.add_argument('--weight_decay_decoder_max', type=float, default=1e-3)
     parser.add_argument('--lr_min', type=float, default=1e-3)
     parser.add_argument('--lr_max', type=float, default=5e-1)
     parser.add_argument('--lr_bias_min', type=float, default=1e-3)
     parser.add_argument('--lr_bias_max', type=float, default=1e-1)
+    parser.add_argument('--lr_decoder_min', type=float, default=1e-3)
+    parser.add_argument('--lr_decoder_max', type=float, default=1e-1)
     parser.add_argument('--bias_gamma_min', type=float, default=0.99)
     parser.add_argument('--bias_gamma_max', type=float, default=0.994)
+    parser.add_argument('--decoder_gamma_min', type=float, default=0.99)
+    parser.add_argument('--decoder_gamma_max', type=float, default=0.994)
     parser.add_argument('--lins_convs_gamma_min', type=float, default=0.5)
     parser.add_argument('--lins_convs_gamma_max', type=float, default=1.0)
     parser.add_argument('--lins_convs_step_size', type=int, default=2)
