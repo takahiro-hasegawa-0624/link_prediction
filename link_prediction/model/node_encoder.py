@@ -287,7 +287,7 @@ class GCNII(torch.nn.Module):
         self.lins.append(GATConv(in_channels=data.x.size(1), out_channels=num_hidden_channels, heads=1, concat=True, dropout=dropout))
 
         self.convs = torch.nn.ModuleList()
-        for layer in range(num_layers-1):
+        for layer in range(num_layers):
             self.convs.append(GCN2Conv(num_hidden_channels, alpha, theta, layer+1, shared_weights = shared_weights, normalize = False))
 
         if self.decode_modelname == 'VGAE':
@@ -334,10 +334,7 @@ class GCNII(torch.nn.Module):
         else:
             for i, conv in enumerate(self.convs):
                 z = F.dropout(z, self.dropout, training = self.training)
-                if i == len(self.convs)-1:
-                    z = conv(z, edge_index)
-                else:
-                    z = conv(z, x_0, edge_index)
+                z = conv(z, x_0, edge_index)
                 if i < len(self.convs) - 1:
                     z = self.batchnorms[i](z)
                     if self.activation == "relu":
