@@ -94,16 +94,6 @@ class GAE(torch.nn.Module):
         else:
             return probs.flatten()
 
-    def encode_decode(self, decode_edge_index=None, *args, **kwargs):
-        '''
-        runs the encoder, computes node-wise latent variables, and gets link probabilities.
-
-        Returns:
-            probs (torch.tensor[num_edges, num_edges]: adjacency matrix of link probabilities.
-        '''
-        z = self.encode(*args, **kwargs)
-        return self.decode(z, decode_edge_index)
-
 class VGAE(GAE):
     r'''The Variational Graph Auto-Encoder model from the
     `"Variational Graph Auto-Encoders" <https://arxiv.org/abs/1611.07308>`_
@@ -190,12 +180,11 @@ class Cat_Linear_Decoder(torch.nn.Module):
             z_j = z[torch.cat([decode_edge_index[1], decode_edge_index[0]], dim=-1)]
             z_ij = torch.cat([z_i, z_j], dim=-1)
 
-            for _ in range(z_ij.size(0)):
-                for lin in self.lins[:-1]:
-                    x = lin(z_ij)
-                    x = F.relu(x)
-                    x = F.dropout(x, p=self.dropout, training=self.training)
-                x = self.lins[-1](x)
+            for lin in self.lins[:-1]:
+                x = lin(z_ij)
+                x = F.relu(x)
+                x = F.dropout(x, p=self.dropout, training=self.training)
+            x = self.lins[-1](x)
 
             if self.sigmoid_bias is True:
                 return torch.sigmoid(self.bias[0](x)).flatten()
@@ -209,12 +198,11 @@ class Cat_Linear_Decoder(torch.nn.Module):
                 z_i = z[[i]*z.size(0)]
                 z_ij = torch.cat([z_i, z], dim=-1)
 
-                for _ in range(z_ij.size(0)):
-                    for lin in self.lins[:-1]:
-                        x = lin(z_ij)
-                        x = F.relu(x)
-                        x = F.dropout(x, p=self.dropout, training=self.training)
-                    x = self.lins[-1](x)
+                for lin in self.lins[:-1]:
+                    x = lin(z_ij)
+                    x = F.relu(x)
+                    x = F.dropout(x, p=self.dropout, training=self.training)
+                x = self.lins[-1](x)
 
                 if self.sigmoid_bias is True:
                     probs = torch.cat([probs, torch.sigmoid(self.bias[0](x))], dim=0)
@@ -222,7 +210,3 @@ class Cat_Linear_Decoder(torch.nn.Module):
                     probs = torch.cat([probs, torch.sigmoid(x)], dim=0)
 
             return probs.flatten()
-
-
-    def encode_decode(self, decode_edge_index, *args, **kwargs):
-        return self.decode(self.encoder(*args, **kwargs), decode_edge_index)
