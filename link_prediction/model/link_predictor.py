@@ -702,9 +702,13 @@ class Link_Prediction_Model():
             val_link_labels = torch.cat([val_link_labels, val_link_labels], dim=-1).flatten()
             test_link_labels = torch.cat([test_link_labels, test_link_labels], dim=-1).flatten()
         
+        val_link_labels = val_link_labels[~np.isnan(val_link_probs)]
+        val_link_probs = val_link_probs[~np.isnan(val_link_probs)]
         val_fpr, val_tpr, _ = roc_curve(val_link_labels, val_link_probs)
         val_auc = roc_auc_score(val_link_labels, val_link_probs)
 
+        test_link_labels = test_link_labels[~np.isnan(test_link_probs)]
+        test_link_probs = test_link_probs[~np.isnan(test_link_probs)]
         test_fpr, test_tpr, _ = roc_curve(test_link_labels, test_link_probs)
         test_auc = roc_auc_score(test_link_labels, test_link_probs)
 
