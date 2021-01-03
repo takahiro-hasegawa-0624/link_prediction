@@ -685,6 +685,10 @@ class Link_Prediction_Model():
             test_link_probs = self.decode_model.decode(self.decode_model.encode(self.data.x), decode_edge_index=edge_index).cpu().detach().clone()
             test_link_labels = my_utils.get_link_labels(pos_edge_index, neg_edge_index).cpu()
 
+        if self.decode_modelname == 'Cat_Linear_Decoder':
+            val_link_labels = torch.cat([val_link_labels, val_link_labels], dim=-1).flatten()
+            test_link_labels = torch.cat([test_link_labels, test_link_labels], dim=-1).flatten()
+        
         val_fpr, val_tpr, _ = roc_curve(val_link_labels, val_link_probs)
         val_auc = roc_auc_score(val_link_labels, val_link_probs)
 
