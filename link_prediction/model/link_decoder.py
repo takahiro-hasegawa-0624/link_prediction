@@ -178,10 +178,10 @@ class Cat_Linear_Decoder(torch.nn.Module):
         if decode_edge_index is not None:
             z_i = z[torch.cat([decode_edge_index[0], decode_edge_index[1]], dim=-1)]
             z_j = z[torch.cat([decode_edge_index[1], decode_edge_index[0]], dim=-1)]
-            z_ij = torch.cat([z_i, z_j], dim=-1)
+            x = torch.cat([z_i, z_j], dim=-1)
 
             for lin in self.lins[:-1]:
-                x = lin(z_ij)
+                x = lin(x)
                 x = F.relu(x)
                 x = F.dropout(x, p=self.dropout, training=self.training)
             x = self.lins[-1](x)
@@ -239,8 +239,8 @@ class Mean_Linear_Decoder(torch.nn.Module):
 
     def decode(self, z, decode_edge_index=None):
         if decode_edge_index is not None:
-            z_i = z[torch.cat([decode_edge_index[0]], dim=-1)]
-            z_j = z[torch.cat([decode_edge_index[1]], dim=-1)]
+            z_i = z[decode_edge_index[0]]
+            z_j = z[decode_edge_index[1]]
 
             x_i = self.lins[0](z_i)
             x_j = self.lins[0](z_j)
@@ -249,7 +249,7 @@ class Mean_Linear_Decoder(torch.nn.Module):
 
             for lin in self.lins[1:-1]:
                 x = F.dropout(x, p=self.dropout, training=self.training)
-                x = lin(z_ij)
+                x = lin(x)
                 x = F.relu(x)
 
             x = self.lins[-1](x)
