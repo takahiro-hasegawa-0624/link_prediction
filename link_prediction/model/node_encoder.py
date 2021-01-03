@@ -284,7 +284,7 @@ class GCNII(torch.nn.Module):
 
         self.lins = torch.nn.ModuleList()
         # self.lins.append(GCNConv(data.x.size(1), num_hidden_channels))
-        self.lins.append(GATConv(in_channels=data.x.size(1), out_channels=num_hidden_channels, heads=1, concat=True, dropout=dropout))
+        self.lins.append(GATConv(in_channels=data.x.size(1), out_channels=num_hidden_channels, heads=1, concat=True, dropout=0.0))
 
         self.convs = torch.nn.ModuleList()
         for layer in range(num_layers):
