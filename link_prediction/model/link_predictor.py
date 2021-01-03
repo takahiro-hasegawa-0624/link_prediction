@@ -797,7 +797,7 @@ class Link_Prediction_Model():
         # 特徴量ベクトルのコサイン類似度のヒストグラムを図示
         fig, ax = plt.subplots(figsize=(10, 5), dpi=150)
         inner_product_flatten = inner_product.flatten()
-        inner_product_flatten = inner_product_flatten[~np.isnan(inner_product_flatten)]
+        inner_product_flatten = inner_product_flatten[~np.isinf(inner_product_flatten)]
         ax.hist(inner_product.flatten(), bins=100)
         ax.set_xlim(-1, 1)
         ax.set_xlabel('cosine similarity of the feature vectors')
@@ -828,7 +828,7 @@ class Link_Prediction_Model():
         # 特徴量ベクトルのノルムのヒストグラムを図示
         fig, ax = plt.subplots(figsize=(10, 5), dpi=150)
         z_norm_flatten = z_norm.flatten()
-        z_norm_flatten = z_norm_flatten[~np.isnan(z_norm_flatten)]
+        z_norm_flatten = z_norm_flatten[~np.isinf(z_norm_flatten)]
         ax.hist(z_norm_flatten, bins=100)
         ax.set_xscale('log')
         ax.set_xlabel('norms of the feature vectors')
