@@ -252,7 +252,7 @@ class Mean_Linear_Decoder(torch.nn.Module):
                 x = lin(x)
                 x = F.relu(x)
 
-            x = self.linss1](x)
+            x = self.lins[-1](x)
 
             if self.sigmoid_bias is True:
                 return torch.sigmoid(self.bias[0](x)).flatten()
