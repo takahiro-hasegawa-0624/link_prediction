@@ -90,7 +90,7 @@ class GAE(torch.nn.Module):
                 probs = torch.sigmoid(torch.mm(z, z.t()))
         
         if decode_edge_index is not None:
-            return probs[decode_edge_index.cpu().numpy()]
+            return probs[decode_edge_index.cpu().numpy()].flatten()
         else:
             return probs.flatten()
 
@@ -184,6 +184,74 @@ class Cat_Linear_Decoder(torch.nn.Module):
                 x = lin(z_ij)
                 x = F.relu(x)
                 x = F.dropout(x, p=self.dropout, training=self.training)
+            x = self.lins[-1](x)
+
+            if self.sigmoid_bias is True:
+                return torch.sigmoid(self.bias[0](x)).flatten()
+            else:
+                return torch.sigmoid(x).flatten()
+
+        else:
+            probs = torch.zeros(0, z.size(0))
+
+            for i in range(z.size(0)):
+                z_i = z[[i]*z.size(0)]
+                z_ij = torch.cat([z_i, z], dim=-1)
+
+                for lin in self.lins[:-1]:
+                    x = lin(z_ij)
+                    x = F.relu(x)
+                    x = F.dropout(x, p=self.dropout, training=self.training)
+                x = self.lins[-1](x)
+
+                if self.sigmoid_bias is True:
+                    probs = torch.cat([probs, torch.sigmoid(self.bias[0](x))], dim=0)
+                else:
+                    probs = torch.cat([probs, torch.sigmoid(x)], dim=0)
+
+            return probs.flatten()
+
+class Mean_Linear_Decoder(torch.nn.Module):
+    def __init__(self, encoder, in_channels, hidden_channels, out_channels=1, num_layers=2, dropout=0.5, self_loop_mask = True, sigmoid_bias=True, sigmoid_bias_initial_value=-2.0):
+        super(Cat_Linear_Decoder, self).__init__()
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+        self.encoder = encoder
+        self.self_loop_mask = self_loop_mask
+        self.sigmoid_bias = sigmoid_bias
+
+        self.lins = torch.nn.ModuleList()
+        self.lins.append(torch.nn.Linear(in_channels, hidden_channels))
+        for _ in range(num_layers - 2):
+            self.lins.append(torch.nn.Linear(hidden_channels, hidden_channels))
+        self.lins.append(torch.nn.Linear(hidden_channels, out_channels))
+
+        self.bias = torch.nn.ModuleList()
+        self.bias.append(Bias(initial_value=sigmoid_bias_initial_value))
+
+        self.dropout = dropout
+
+    def encode(self, *args, **kwargs):
+        '''Runs the encoder and computes node-wise latent variables.
+        '''
+
+        return self.encoder(*args, **kwargs)
+
+    def decode(self, z, decode_edge_index=None):
+        if decode_edge_index is not None:
+            z_i = z[torch.cat([decode_edge_index[0]], dim=-1)]
+            z_j = z[torch.cat([decode_edge_index[1]], dim=-1)]
+
+            x_i = self.lins[0](z_i)
+            x_j = self.lins[0](z_j)
+            x = (x_i + x_j) * 0.5
+            x = F.relu(x)
+
+            for lin in self.lins[1:-1]:
+                x = F.dropout(x, p=self.dropout, training=self.training)
+                x = lin(z_ij)
+                x = F.relu(x)
+
             x = self.lins[-1](x)
 
             if self.sigmoid_bias is True:
