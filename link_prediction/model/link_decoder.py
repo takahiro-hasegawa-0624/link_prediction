@@ -68,7 +68,7 @@ class GAE(torch.nn.Module):
         '''
         return self.encoder(*args, **kwargs)
 
-    def decode(self, z, decode_edge_index=None):
+    def decode(self, z, decode_node_pairs=None):
         '''
         gets link probabilities from the outputs of the encode model
 
@@ -89,8 +89,8 @@ class GAE(torch.nn.Module):
             else:
                 probs = torch.sigmoid(torch.mm(z, z.t()))
         
-        if decode_edge_index is not None:
-            return probs[decode_edge_index.cpu().numpy()].flatten()
+        if decode_node_pairs is not None:
+            return probs[decode_node_pairs.cpu().numpy()].flatten()
         else:
             return probs.flatten()
 
@@ -174,10 +174,10 @@ class Cat_Linear_Decoder(torch.nn.Module):
 
         return self.encoder(*args, **kwargs)
 
-    def decode(self, z, decode_edge_index=None):
-        if decode_edge_index is not None:
-            z_i = z[torch.cat([decode_edge_index[0], decode_edge_index[1]], dim=-1)]
-            z_j = z[torch.cat([decode_edge_index[1], decode_edge_index[0]], dim=-1)]
+    def decode(self, z, decode_node_pairs=None):
+        if decode_node_pairs is not None:
+            z_i = z[torch.cat([decode_node_pairs[0], decode_node_pairs[1]], dim=-1)]
+            z_j = z[torch.cat([decode_node_pairs[1], decode_node_pairs[0]], dim=-1)]
             x = torch.cat([z_i, z_j], dim=-1)
 
             for lin in self.lins[:-1]:
@@ -196,10 +196,10 @@ class Cat_Linear_Decoder(torch.nn.Module):
 
             for i in range(z.size(0)):
                 z_i = z[[i]*z.size(0)]
-                z_ij = torch.cat([z_i, z], dim=-1)
+                x = torch.cat([z_i, z], dim=-1)
 
                 for lin in self.lins[:-1]:
-                    x = lin(z_ij)
+                    x = lin(x)
                     x = F.relu(x)
                     x = F.dropout(x, p=self.dropout, training=self.training)
                 x = self.lins[-1](x)
@@ -237,10 +237,10 @@ class Mean_Linear_Decoder(torch.nn.Module):
 
         return self.encoder(*args, **kwargs)
 
-    def decode(self, z, decode_edge_index=None):
-        if decode_edge_index is not None:
-            z_i = z[decode_edge_index[0]]
-            z_j = z[decode_edge_index[1]]
+    def decode(self, z, decode_node_pairs=None):
+        if decode_node_pairs is not None:
+            z_i = z[decode_node_pairs[0]]
+            z_j = z[decode_node_pairs[1]]
 
             x_i = self.lins[0](z_i)
             x_j = self.lins[0](z_j)
@@ -252,7 +252,7 @@ class Mean_Linear_Decoder(torch.nn.Module):
                 x = lin(x)
                 x = F.relu(x)
 
-            x = self.lins[-1](x)
+            x = self.linss1](x)
 
             if self.sigmoid_bias is True:
                 return torch.sigmoid(self.bias[0](x)).flatten()
@@ -264,12 +264,18 @@ class Mean_Linear_Decoder(torch.nn.Module):
 
             for i in range(z.size(0)):
                 z_i = z[[i]*z.size(0)]
-                z_ij = torch.cat([z_i, z], dim=-1)
+                z_j = z
 
-                for lin in self.lins[:-1]:
-                    x = lin(z_ij)
+                x_i = self.lins[0](z_i)
+                x_j = self.lins[0](z_j)
+                x = (x_i + x_j) * 0.5
+                x = F.relu(x)
+
+                for lin in self.lins[1:-1]:
+                    x = lin(x)
                     x = F.relu(x)
                     x = F.dropout(x, p=self.dropout, training=self.training)
+
                 x = self.lins[-1](x)
 
                 if self.sigmoid_bias is True:

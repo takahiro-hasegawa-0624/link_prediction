@@ -444,7 +444,7 @@ class Link_Prediction_Model():
             else:
                 z = self.decode_model.encode(self.data.x)
 
-            link_probs = self.decode_model.decode(z, decode_edge_index = edge_index)
+            link_probs = self.decode_model.decode(z, decode_node_pairs = edge_index)
             if torch.isnan(link_probs).sum()>0:
                 print('np.nan occurred')
                 link_probs[torch.isnan(link_probs)]=1.0
@@ -492,7 +492,7 @@ class Link_Prediction_Model():
             return None, None, None
 
         z = self.decode_model.encode(self.data.x)
-        link_probs = self.decode_model.decode(z, decode_edge_index = edge_index)
+        link_probs = self.decode_model.decode(z, decode_node_pairs = edge_index)
         
         if torch.isnan(link_probs).sum()>0:
             print('np.nan occurred')
@@ -527,7 +527,7 @@ class Link_Prediction_Model():
         edge_index = torch.cat([pos_edge_index, neg_edge_index], dim = -1)
 
         z = self.decode_model.encode(self.data.x)
-        link_probs = self.decode_model.decode(z, decode_edge_index = edge_index)
+        link_probs = self.decode_model.decode(z, decode_node_pairs = edge_index)
 
         if torch.isnan(link_probs).sum()>0:
             print('np.nan occurred')
@@ -676,26 +676,26 @@ class Link_Prediction_Model():
             pos_edge_index = self.data['val_pos_edge_index']
             neg_edge_index = self.data['val_neg_edge_index']
             edge_index = torch.cat([pos_edge_index, neg_edge_index], dim = -1)
-            val_link_probs = self.best_decode_model.decode(self.best_decode_model.encode(self.data.x), decode_edge_index=edge_index).cpu().detach().clone()
+            val_link_probs = self.best_decode_model.decode(self.best_decode_model.encode(self.data.x), decode_node_pairs=edge_index).cpu().detach().clone()
             val_link_labels = my_utils.get_link_labels(pos_edge_index, neg_edge_index).cpu()
 
             pos_edge_index = self.data['test_pos_edge_index']
             neg_edge_index = self.data['test_neg_edge_index']
             edge_index = torch.cat([pos_edge_index, neg_edge_index], dim = -1)
-            test_link_probs = self.best_decode_model.decode(self.best_decode_model.encode(self.data.x), decode_edge_index=edge_index).cpu().detach().clone()
+            test_link_probs = self.best_decode_model.decode(self.best_decode_model.encode(self.data.x), decode_node_pairs=edge_index).cpu().detach().clone()
             test_link_labels = my_utils.get_link_labels(pos_edge_index, neg_edge_index).cpu()
 
         else:
             pos_edge_index = self.data['val_pos_edge_index']
             neg_edge_index = self.data['val_neg_edge_index']
             edge_index = torch.cat([pos_edge_index, neg_edge_index], dim = -1)
-            val_link_probs = self.decode_model.decode(self.decode_model.encode(self.data.x), decode_edge_index=edge_index).cpu().detach().clone()
+            val_link_probs = self.decode_model.decode(self.decode_model.encode(self.data.x), decode_node_pairs=edge_index).cpu().detach().clone()
             val_link_labels = my_utils.get_link_labels(pos_edge_index, neg_edge_index).cpu()
 
             pos_edge_index = self.data['test_pos_edge_index']
             neg_edge_index = self.data['test_neg_edge_index']
             edge_index = torch.cat([pos_edge_index, neg_edge_index], dim = -1)
-            test_link_probs = self.decode_model.decode(self.decode_model.encode(self.data.x), decode_edge_index=edge_index).cpu().detach().clone()
+            test_link_probs = self.decode_model.decode(self.decode_model.encode(self.data.x), decode_node_pairs=edge_index).cpu().detach().clone()
             test_link_labels = my_utils.get_link_labels(pos_edge_index, neg_edge_index).cpu()
 
         if (self.decode_modelname == 'Cat_Linear_Decoder'):
