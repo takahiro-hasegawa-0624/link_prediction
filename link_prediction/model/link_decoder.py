@@ -53,8 +53,9 @@ class GAE(torch.nn.Module):
         self.encoder = encoder
         self.self_loop_mask = self_loop_mask
         self.sigmoid_bias = sigmoid_bias
-        
+
         self.lins = torch.nn.ModuleList()
+        self.lins.append(torch.nn.Linear(1, 1))
         self.bias = torch.nn.ModuleList()
         self.bias.append(Bias(initial_value=sigmoid_bias_initial_value))
 
@@ -187,7 +188,7 @@ class Cat_Linear_Decoder(torch.nn.Module):
         if decode_edge_index is not None:
             z_i = z[torch.cat([decode_edge_index[0], decode_edge_index[1]], dim=-1)]
             z_j = z[torch.cat([decode_edge_index[1], decode_edge_index[0]], dim=-1)]
-            z_ij = torch.cat([z_i, z_j], dim=-1)
+            z_ij = torch.cat([z_i, z_j], dim=0)
 
             for _ in range(z_ij.size(0)):
                 for lin in self.lins[:-1]:
