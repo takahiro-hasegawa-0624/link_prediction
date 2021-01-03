@@ -288,7 +288,7 @@ class GCNII(torch.nn.Module):
         self.convs = torch.nn.ModuleList()
         for layer in range(num_layers-1):
             self.convs.append(GCN2Conv(num_hidden_channels, alpha, theta, layer+1, shared_weights = shared_weights, normalize = False))
-        self.convs.append(GATConv(in_channels=num_hidden_channels, out_channels=num_hidden_channels*2, heads=4, concat=True, dropout=dropout))
+        self.convs.append(GATConv(in_channels=num_hidden_channels, out_channels=num_hidden_channels*2, heads=1, concat=True, dropout=dropout))
 
         if self.decode_modelname == 'VGAE':
             self.convs.append(GCN2Conv(num_hidden_channels, alpha, theta, layer+1, shared_weights = shared_weights, normalize = False))
