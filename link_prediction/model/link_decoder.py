@@ -181,9 +181,11 @@ class Cat_Linear_Decoder(torch.nn.Module):
             x = torch.cat([z_i, z_j], dim=-1)
 
             for lin in self.lins[:-1]:
+                x = F.dropout(x, p=self.dropout, training=self.training)
                 x = lin(x)
                 x = F.relu(x)
-                x = F.dropout(x, p=self.dropout, training=self.training)
+
+            x = F.dropout(x, p=self.dropout, training=self.training)
             x = self.lins[-1](x)
 
             if self.sigmoid_bias is True:
@@ -199,9 +201,10 @@ class Cat_Linear_Decoder(torch.nn.Module):
                 x = torch.cat([z_i, z], dim=-1)
 
                 for lin in self.lins[:-1]:
+                    x = F.dropout(x, p=self.dropout, training=self.training)
                     x = lin(x)
                     x = F.relu(x)
-                    x = F.dropout(x, p=self.dropout, training=self.training)
+
                 x = self.lins[-1](x)
 
                 if self.sigmoid_bias is True:
