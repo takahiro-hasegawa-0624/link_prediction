@@ -452,7 +452,7 @@ class Link_Prediction_Model():
             link_labels = my_utils.get_link_labels(self.data.train_pos_edge_index, neg_edge_index).to(self.device)
             weight = my_utils.get_loss_weight(self.data.train_pos_edge_index, neg_edge_index, self.negative_sampling_ratio).to(self.device)
 
-            if (self.decode_modelname == 'Cat_Linear_Decoder') or (self.decode_modelname == 'Mean_Linear_Decoder'):
+            if (self.decode_modelname == 'Cat_Linear_Decoder'):
                 link_labels = torch.cat([link_labels, link_labels], dim=-1).flatten()
                 weight = torch.cat([weight, weight], dim=-1).flatten()
 
@@ -499,7 +499,7 @@ class Link_Prediction_Model():
             link_probs[torch.isnan(link_probs)]=1.0
         link_labels = my_utils.get_link_labels(pos_edge_index, neg_edge_index).to(self.device)
 
-        if (self.decode_modelname == 'Cat_Linear_Decoder') or (self.decode_modelname == 'Mean_Linear_Decoder'):
+        if (self.decode_modelname == 'Cat_Linear_Decoder'):
             link_labels = torch.cat([link_labels, link_labels], dim=-1).flatten()
 
         loss = F.binary_cross_entropy(link_probs, link_labels)
@@ -534,7 +534,7 @@ class Link_Prediction_Model():
             link_probs[torch.isnan(link_probs)]=1.0
         link_labels = my_utils.get_link_labels(pos_edge_index, neg_edge_index).to(self.device)
 
-        if (self.decode_modelname == 'Cat_Linear_Decoder') or (self.decode_modelname == 'Mean_Linear_Decoder'):
+        if (self.decode_modelname == 'Cat_Linear_Decoder'):
             link_labels = torch.cat([link_labels, link_labels], dim=-1).flatten()
 
         loss = F.binary_cross_entropy(link_probs, link_labels)
@@ -698,7 +698,7 @@ class Link_Prediction_Model():
             test_link_probs = self.decode_model.decode(self.decode_model.encode(self.data.x), decode_edge_index=edge_index).cpu().detach().clone()
             test_link_labels = my_utils.get_link_labels(pos_edge_index, neg_edge_index).cpu()
 
-        if (self.decode_modelname == 'Cat_Linear_Decoder') or (self.decode_modelname == 'Mean_Linear_Decoder'):
+        if (self.decode_modelname == 'Cat_Linear_Decoder'):
             val_link_labels = torch.cat([val_link_labels, val_link_labels], dim=-1).flatten()
             test_link_labels = torch.cat([test_link_labels, test_link_labels], dim=-1).flatten()
         
