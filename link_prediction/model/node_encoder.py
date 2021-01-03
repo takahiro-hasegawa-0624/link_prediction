@@ -10,7 +10,7 @@ Todo:
 import torch
 import torch.nn.functional as F
 
-from torch_geometric.nn import GCNConv, GCN2Conv, global_mean_pool, JumpingKnowledge
+from torch_geometric.nn import GCNConv, GCN2Conv, GATConv, global_mean_pool, JumpingKnowledge
 
 from link_prediction.my_util import my_utils
 
@@ -286,8 +286,9 @@ class GCNII(torch.nn.Module):
         self.lins.append(GCNConv(data.x.size(1), num_hidden_channels))
 
         self.convs = torch.nn.ModuleList()
-        for layer in range(num_layers):
+        for layer in range(num_layers-1):
             self.convs.append(GCN2Conv(num_hidden_channels, alpha, theta, layer+1, shared_weights = shared_weights, normalize = False))
+        self.convs.append(GATConv(in_channels=num_hidden_channels, out_channels=num_hidden_channels, heads=4, concat=False, dropout=dropout))
 
         if self.decode_modelname == 'VGAE':
             self.convs.append(GCN2Conv(num_hidden_channels, alpha, theta, layer+1, shared_weights = shared_weights, normalize = False))
@@ -333,7 +334,10 @@ class GCNII(torch.nn.Module):
         else:
             for i, conv in enumerate(self.convs):
                 z = F.dropout(z, self.dropout, training = self.training)
-                z = conv(z, x_0, edge_index)
+                if i == len(self.convs)-1:
+                    z = conv(z, edge_index)
+                else:
+                    z = conv(z, x_0, edge_index)
                 if i < len(self.convs) - 1:
                     z = self.batchnorms[i](z)
                     if self.activation == "relu":

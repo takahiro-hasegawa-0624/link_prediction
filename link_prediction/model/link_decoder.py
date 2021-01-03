@@ -189,7 +189,6 @@ class Cat_Linear_Decoder(torch.nn.Module):
             z_i = z[torch.cat([decode_edge_index[0], decode_edge_index[1]], dim=-1)]
             z_j = z[torch.cat([decode_edge_index[1], decode_edge_index[0]], dim=-1)]
             z_ij = torch.cat([z_i, z_j], dim=-1)
-            print(z_i.size(), z_j.size(), z_ij.size())
 
             for _ in range(z_ij.size(0)):
                 for lin in self.lins[:-1]:
