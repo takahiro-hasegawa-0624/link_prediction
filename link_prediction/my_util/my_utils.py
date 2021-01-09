@@ -171,6 +171,7 @@ def data_processor(data, undirected=True):
 
     for i in range(val_test_edge.size(1)):
         mask[val_test_edge[0,i], val_test_edge[1,i]] = 0
+        mask[val_test_edge[1,i], val_test_edge[0,i]] = 0
 
     mask = mask.flatten()
 

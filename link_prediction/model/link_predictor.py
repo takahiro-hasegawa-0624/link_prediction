@@ -370,9 +370,10 @@ class Link_Prediction_Model():
         Parameters:
             scheduler (dict of torch.optim.lr_scheduler): scheduler. tagは'bias' (sigmoidのバイアス項), 'convs' (graph convolution), 'lins' (全結合層).
         '''
-        if self.num_epochs != 0:
-            print('unable to set a scheduler while training.')
-        else:
+        # if self.num_epochs != 0:
+        #     print('unable to set a scheduler while training.')
+        # else:
+        if True:
             for key, value in scheduler.items():
                 self.scheduler[key] = value
 
@@ -447,7 +448,7 @@ class Link_Prediction_Model():
                 train_pos_edge_adj_t = SparseTensor(row=col, col=row, value=value, sparse_sizes=(N, N), is_sorted=True)
                 z = self.decode_model.encode(self.data.x, edge_index=train_pos_edge_adj_t)
             else:
-                z = self.decode_model.encode(self.data.x, edge_index=self.train_pos_edge_adj_t)
+                z = self.decode_model.encode(self.data.x)
 
             link_probs = self.decode_model.decode(z, decode_node_pairs = edge_index)
             if torch.isnan(link_probs).sum()>0:
@@ -924,6 +925,8 @@ class Link_Prediction_Model():
                 'activation', 
                 'sigmoid_bias', 
                 'negative_injection', 
+                'alpha',
+                'beta',
                 'bias_weight_decay', 
                 'bias_lr', 
                 'bias_lr_scheduler', 
@@ -970,6 +973,8 @@ class Link_Prediction_Model():
         log_dic['activation'] = self.activation
         log_dic['sigmoid_bias'] = self.sigmoid_bias
         log_dic['negative_injection'] = self.negative_injection
+        log_dic['alpha'] = self.alpha
+        log_dic['beta'] = self.beta
 
         log_dic['bias_weight_decay'] = self.optimizer['decoder_bias'].param_groups[0]['weight_decay']
         log_dic['bias_lr'] = self.optimizer['decoder_bias'].param_groups[0]['lr']
