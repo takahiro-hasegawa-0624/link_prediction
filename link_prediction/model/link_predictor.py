@@ -926,7 +926,7 @@ class Link_Prediction_Model():
                 'sigmoid_bias', 
                 'negative_injection', 
                 'alpha',
-                'beta',
+                'theta',
                 'bias_weight_decay', 
                 'bias_lr', 
                 'bias_lr_scheduler', 
@@ -974,7 +974,7 @@ class Link_Prediction_Model():
         log_dic['sigmoid_bias'] = self.sigmoid_bias
         log_dic['negative_injection'] = self.negative_injection
         log_dic['alpha'] = self.alpha
-        log_dic['beta'] = self.beta
+        log_dic['theta'] = self.theta
 
         log_dic['bias_weight_decay'] = self.optimizer['decoder_bias'].param_groups[0]['weight_decay']
         log_dic['bias_lr'] = self.optimizer['decoder_bias'].param_groups[0]['lr']
