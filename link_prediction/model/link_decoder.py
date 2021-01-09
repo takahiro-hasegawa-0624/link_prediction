@@ -110,7 +110,9 @@ class VGAE(GAE):
         super(VGAE, self).__init__(encoder, self_loop_mask, sigmoid_bias)
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.MAX_LOGSTD = 10
-
+        
+        self.lins = torch.nn.ModuleList()
+        self.lins.append(torch.nn.Linear(1, 1))
         self.bias = torch.nn.ModuleList()
         self.bias.append(Bias(initial_value=sigmoid_bias_initial_value))
 

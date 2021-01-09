@@ -144,8 +144,9 @@ class Link_Prediction_Model():
                 theta = 0.5, 
                 shared_weights = True, 
                 dropout = 0.0,
-                negative_sampling_ratio = None,
-                threshold = 0.5):
+                negative_sampling_ratio = 1,
+                threshold = 0.5,
+                seed=42):
         '''
         modelを指定する.
 
@@ -153,7 +154,7 @@ class Link_Prediction_Model():
             encode_modelname (:obj:`str`): 'NN', 'GCN', 'GCNII'を選択.
             decode_modelname (:obj:`str`): 'GAE', 'VGAE'を選択.
             activation (obj`int` or None): activation functionを指定。None, "relu", "leaky_relu", or "tanh". (Default: None)
-            sigmoid_bias (bool): If set to to True, sigmoid関数の入力にバイアス項が加わる (sigmoid(z^tz + b)。 (Default: False)
+            sigmoid_bias (bool): If set to to True, sigmoid関数の入力にバイ**/uアス項が加わる (sigmoid(z^tz + b)。 (Default: False)
             self_loop_mask (bool): If set to to True, 特徴量の内積が必ず正となり、必ず存在確率が0.5以上となる自己ループを除外する。 (Default: False)
             num_hidden_channels (int or None): 隠れ層の出力次元数. 全ての層で同じ値が適用される.
             num_layers (int or None): 隠れ層の数.
@@ -164,18 +165,19 @@ class Link_Prediction_Model():
             theta (float): .
             shared_weights (bool): . (Default: True)
             dropout (float): 各層のDropoutの割合. (Default: 0.0)
-            negative_sampling_ratio (float or None): 正例に対する負例のサンプリング比率. If set to None, 負例を全て用いる. (Default: None)
+            negative_sampling_ratio (float or None): 正例に対する負例のサンプリング比率. If set to None, 負例を全て用いる. (Default: 1)
             threshold (float): リンク有りと予測するsigmoidの出力の閾値. (Default: 0.5)
+            seed (int): random seed. (Default: 42)
         '''
 
         print('######################################')
 
-        seed = 42
-        np.random.seed(seed)
-        random.seed(seed)
-        torch.manual_seed(seed)
-        torch.cuda.manual_seed(seed)
-        print('reset the model and the random seed.')
+        self.seed = seed
+        np.random.seed(self.seed)
+        random.seed(self.seed)
+        torch.manual_seed(self.seed)
+        torch.cuda.manual_seed(self.seed)
+        print(f'reset the model and the random seed {seed}.')
 
         self.encode_modelname = encode_modelname
         self.decode_modelname = decode_modelname
@@ -278,20 +280,23 @@ class Link_Prediction_Model():
         # optimizerはAdamをdefaultとする。self.my_optimizerで指定可能。
         self.optimizer = {}
         if activation == 'tanh':
-            self.optimizer['bias'] = torch.optim.Adam(self.decode_model.bias.parameters(), weight_decay=0.2, lr=0.05)
-            self.optimizer['convs'] = torch.optim.Adam(self.encode_model.convs.parameters(), weight_decay=0.01, lr=0.005)
-            self.optimizer['lins'] = torch.optim.Adam(self.encode_model.lins.parameters(), weight_decay=0.01, lr=0.005)
+            self.optimizer['decoder_bias'] = torch.optim.Adam(self.decode_model.bias.parameters(), weight_decay=0.2, lr=0.05)
+            self.optimizer['decoder_lins'] = torch.optim.Adam(self.encode_model.lins.parameters(), weight_decay=0.01, lr=0.005)
+            self.optimizer['encoder_convs'] = torch.optim.Adam(self.encode_model.convs.parameters(), weight_decay=0.01, lr=0.005)
+            self.optimizer['encoder_lins'] = torch.optim.Adam(self.encode_model.lins.parameters(), weight_decay=0.01, lr=0.005)
 
         else:
-            self.optimizer['bias'] = torch.optim.Adam(self.decode_model.bias.parameters(), weight_decay=0.01, lr=0.05)
-            self.optimizer['convs'] = torch.optim.Adam(self.encode_model.convs.parameters(), weight_decay=0.01, lr=0.005)
-            self.optimizer['lins'] = torch.optim.Adam(self.encode_model.lins.parameters(), weight_decay=0.01, lr=0.005)
+            self.optimizer['decoder_bias'] = torch.optim.Adam(self.decode_model.bias.parameters(), weight_decay=0.01, lr=0.05)
+            self.optimizer['decoder_lins'] = torch.optim.Adam(self.encode_model.lins.parameters(), weight_decay=0.01, lr=0.005)
+            self.optimizer['encoder_convs'] = torch.optim.Adam(self.encode_model.convs.parameters(), weight_decay=0.01, lr=0.005)
+            self.optimizer['encoder_lins'] = torch.optim.Adam(self.encode_model.lins.parameters(), weight_decay=0.01, lr=0.005)
 
         # learning rate のscheduler はself.my_schedulerで指定可能。
         self.scheduler = {}
-        self.scheduler['bias'] = None
-        self.scheduler['convs'] = None
-        self.scheduler['lins'] = None
+        self.scheduler['decoder_bias'] = None
+        self.scheduler['decoder_lins'] = None
+        self.scheduler['encoder_convs'] = None
+        self.scheduler['encoder_lins'] = None
 
         self.num_hidden_channels = num_hidden_channels
         self.num_layers = self.encode_model.num_layers
@@ -713,7 +718,7 @@ class Link_Prediction_Model():
         test_auc = roc_auc_score(test_link_labels, test_link_probs)
 
         # lossの図示
-        fig, ax = plt.subplots(figsize=(10, 5), dpi=150)
+        fig, ax = plt.subplots(figsize=(8, 4.5), dpi=150)
         ax.axvline(x=epochs, c='crimson')
         ax.plot(np.arange(1, self.num_epochs+1), self.train_loss_list, label='train')
         ax.plot(np.arange(1, self.num_epochs+1), self.val_loss_list, label='validation')
@@ -731,7 +736,7 @@ class Link_Prediction_Model():
             plt.close()
 
         # AUCの図示
-        fig, ax = plt.subplots(figsize=(10, 5), dpi=150)
+        fig, ax = plt.subplots(figsize=(8, 4.5), dpi=150)
         ax.axvline(x=epochs, c='crimson')
         ax.plot(np.arange(1, self.num_epochs+1), self.train_auc_list, label='train')
         ax.plot(np.arange(1, self.num_epochs+1), self.val_auc_list, label='validation')
@@ -749,7 +754,7 @@ class Link_Prediction_Model():
             plt.close()
 
         # accuracyの図示
-        fig, ax = plt.subplots(figsize=(10, 5), dpi=150)
+        fig, ax = plt.subplots(figsize=(8, 4.5), dpi=150)
         ax.axvline(x=epochs, c='crimson')
         ax.plot(np.arange(1, self.num_epochs+1), self.train_accuracy_list, label='train')
         ax.plot(np.arange(1, self.num_epochs+1), self.val_accuracy_list, label='validation')
@@ -784,7 +789,7 @@ class Link_Prediction_Model():
 
         # sigmoidのバイアス項の推移を図示
         if self.sigmoid_bias is True:
-            fig, ax = plt.subplots(figsize=(10, 5), dpi=150)
+            fig, ax = plt.subplots(figsize=(8, 4.5), dpi=150)
             ax.axvline(x=epochs, c='crimson')
             ax.plot(np.arange(1, self.num_epochs+1), self.sigmoid_bias_list)
             ax.set_xlabel('epoch')
@@ -799,7 +804,7 @@ class Link_Prediction_Model():
             plt.close()
 
         # 特徴量ベクトルのコサイン類似度のヒストグラムを図示
-        fig, ax = plt.subplots(figsize=(10, 5), dpi=150)
+        fig, ax = plt.subplots(figsize=(8, 4.5), dpi=150)
         inner_product_flatten = inner_product.flatten()
         inner_product_flatten = inner_product_flatten[~np.isinf(inner_product_flatten)]
         ax.hist(inner_product.flatten(), bins=100)
@@ -815,7 +820,7 @@ class Link_Prediction_Model():
             plt.close()
 
         # 特徴量ベクトルのノルムの平均値を図示
-        # fig, ax = plt.subplots(figsize=(10, 5), dpi=150)
+        # fig, ax = plt.subplots(figsize=(8, 4.5), dpi=150)
         # ax.axvline(x=epochs, c='crimson')
         # ax.plot(np.arange(1, self.num_epochs+1), self.feature_distances_list)
         # ax.set_xlabel('epoch')
@@ -830,7 +835,7 @@ class Link_Prediction_Model():
         #     plt.close()
 
         # 特徴量ベクトルのノルムのヒストグラムを図示
-        fig, ax = plt.subplots(figsize=(10, 5), dpi=150)
+        fig, ax = plt.subplots(figsize=(8, 4.5), dpi=150)
         z_norm_flatten = z_norm.flatten()
         z_norm_flatten = z_norm_flatten[~np.isinf(z_norm_flatten)]
         ax.hist(z_norm_flatten, bins=100)
@@ -906,6 +911,7 @@ class Link_Prediction_Model():
         else:
             self.summary = pd.DataFrame(columns=[
                 'datetime', 
+                'seed',
                 'dataset', 
                 'encode_modelname', 
                 'decode_modelname',
@@ -951,6 +957,7 @@ class Link_Prediction_Model():
 
         log_dic = {}
         log_dic['datetime'] = self.start_time
+        log_dic['seed'] = self.seed
         log_dic['dataset'] = self.dataset_name
         log_dic['encode_modelname'] = self.encode_modelname
         log_dic['decode_modelname'] = self.decode_modelname
