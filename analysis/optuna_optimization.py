@@ -120,6 +120,7 @@ def main():
     parser.add_argument('--gcnii_theta_min', type=float, default=0.1)
     parser.add_argument('--gcnii_theta_max', type=float, default=1.5)
     parser.add_argument('--save_study', type=int, default=1)
+    parser.add_argument('--read_strage_only', type=int, default=0)
 
     args = parser.parse_args()
 
@@ -138,7 +139,8 @@ def main():
     else:
         study = optuna.create_study()
 
-    study.optimize(run_objective(args=args, model=model), timeout=args.timeout)
+    if args.read_strage_only==0:
+        study.optimize(run_objective(args=args, model=model), timeout=args.timeout)
 
     if args.encode_model == 'GCNII':
         alpha = study.best_params['gcnii_alpha']
@@ -182,7 +184,7 @@ def main():
         scheduler['lins'] = torch.optim.lr_scheduler.MultiStepLR(model.optimizer['lins'], milestones=[1000,2000], gamma=study.best_params['lins_convs_gamma'])
     model.my_scheduler(scheduler)
         
-    model.run_training(num_epochs=5000, print_log=False, save_dir=current_dir)
+    model.run_training(num_epochs=5000, print_log=True, save_dir=current_dir)
     model.model_evaluate(validation=True, save=True)
 
     return
