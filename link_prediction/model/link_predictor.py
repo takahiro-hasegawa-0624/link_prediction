@@ -447,7 +447,7 @@ class Link_Prediction_Model():
                 train_pos_edge_adj_t = SparseTensor(row=col, col=row, value=value, sparse_sizes=(N, N), is_sorted=True)
                 z = self.decode_model.encode(self.data.x, edge_index=train_pos_edge_adj_t)
             else:
-                z = self.decode_model.encode(self.data.x)
+                z = self.decode_model.encode(self.data.x, edge_index=self.train_pos_edge_adj_t)
 
             link_probs = self.decode_model.decode(z, decode_node_pairs = edge_index)
             if torch.isnan(link_probs).sum()>0:
@@ -467,11 +467,17 @@ class Link_Prediction_Model():
             loss.backward()
             for optimizer in self.optimizer.values():
                 if optimizer is not None:
-                    optimizer.step()
+                    try:
+                        optimizer.step()
+                    except:
+                        pass
 
             for scheduler in self.scheduler.values():
                 if scheduler is not None:
-                    scheduler.step()
+                    try:
+                        scheduler.step()
+                    except:
+                        pass
 
             return float(loss.cpu()), link_labels.cpu(), link_probs.cpu().detach().clone(), z.cpu().detach().clone()
             
