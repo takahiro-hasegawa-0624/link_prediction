@@ -965,35 +965,35 @@ class Link_Prediction_Model():
         log_dic['sigmoid_bias'] = self.sigmoid_bias
         log_dic['negative_injection'] = self.negative_injection
 
-        log_dic['bias_weight_decay'] = self.optimizer['bias'].param_groups[0]['weight_decay']
-        log_dic['bias_lr'] = self.optimizer['bias'].param_groups[0]['lr']
-        if self.scheduler['bias'] is None:
+        log_dic['bias_weight_decay'] = self.optimizer['decoder_bias'].param_groups[0]['weight_decay']
+        log_dic['bias_lr'] = self.optimizer['decoder_bias'].param_groups[0]['lr']
+        if self.scheduler['decoder_bias'] is None:
             log_dic['bias_lr_scheduler'] = None
             log_dic['bias_lr_scheduler_gamma'] = None
         else:
-            log_dic['bias_lr_scheduler'] = self.scheduler['bias'].__class__.__name__
-            log_dic['bias_lr_scheduler_gamma'] = self.scheduler['bias'].gamma
-            log_dic['bias_lr'] = self.scheduler['bias'].base_lrs[0]
+            log_dic['bias_lr_scheduler'] = self.scheduler['decoder_bias'].__class__.__name__
+            log_dic['bias_lr_scheduler_gamma'] = self.scheduler['decoder_bias'].gamma
+            log_dic['bias_lr'] = self.scheduler['decoder_bias'].base_lrs[0]
 
-        log_dic['convs_weight_decay'] = self.optimizer['convs'].param_groups[0]['weight_decay']
-        log_dic['convs_lr'] = self.optimizer['convs'].param_groups[0]['lr']
-        if self.scheduler['convs'] is None:
+        log_dic['convs_weight_decay'] = self.optimizer['encoder_convs'].param_groups[0]['weight_decay']
+        log_dic['convs_lr'] = self.optimizer['encoder_convs'].param_groups[0]['lr']
+        if self.scheduler['encoder_convs'] is None:
             log_dic['convs_lr_scheduler'] = None
             log_dic['convs_lr_scheduler_gamma'] = None
         else:
-            log_dic['convs_lr_scheduler'] = self.scheduler['convs'].__class__.__name__
-            log_dic['convs_lr_scheduler_gamma'] = self.scheduler['convs'].gamma
-            log_dic['convs_lr'] = self.scheduler['convs'].base_lrs[0]
+            log_dic['convs_lr_scheduler'] = self.scheduler['encoder_convs'].__class__.__name__
+            log_dic['convs_lr_scheduler_gamma'] = self.scheduler['encoder_convs'].gamma
+            log_dic['convs_lr'] = self.scheduler['encoder_convs'].base_lrs[0]
 
-        log_dic['lins_weight_decay'] = self.optimizer['lins'].param_groups[0]['weight_decay']
-        log_dic['lins_lr'] = self.optimizer['lins'].param_groups[0]['lr']
-        if self.scheduler['lins'] is None:
+        log_dic['lins_weight_decay'] = self.optimizer['encoder_lins'].param_groups[0]['weight_decay']
+        log_dic['lins_lr'] = self.optimizer['encoder_lins'].param_groups[0]['lr']
+        if self.scheduler['encoder_lins'] is None:
             log_dic['lins_lr_scheduler'] = None
             log_dic['lins_lr_scheduler_gamma'] = None
         else:
-            log_dic['lins_lr_scheduler'] = self.scheduler['lins'].__class__.__name__
-            log_dic['lins_lr_scheduler_gamma'] = self.scheduler['lins'].gamma
-            log_dic['lins_lr'] = self.scheduler['lins'].base_lrs[0]
+            log_dic['lins_lr_scheduler'] = self.scheduler['encoder_lins'].__class__.__name__
+            log_dic['lins_lr_scheduler_gamma'] = self.scheduler['encoder_lins'].gamma
+            log_dic['lins_lr'] = self.scheduler['encoder_lins'].base_lrs[0]
 
         log_dic['num_layers'] = self.num_layers
         log_dic['hidden_channels'] = self.encode_model.hidden_channels_str
