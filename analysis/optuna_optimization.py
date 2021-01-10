@@ -95,6 +95,7 @@ def main():
     parser.add_argument('--decode_model', type=str, default='GAE')
     parser.add_argument('--activation', type=str, default='relu')
     parser.add_argument('--num_layers', type=int, default=32)
+    parser.add_argument('--num_hidden_channels', type=int, default=32)
     parser.add_argument('--timeout', type=int, default=60*60*12)
     parser.add_argument('--num_epochs', type=int, default=1000)
     parser.add_argument('--weight_decay_min', type=float, default=1e-12)
@@ -130,7 +131,7 @@ def main():
 
     model = Link_Prediction_Model(dataset_name=args.dataset, val_ratio=0.05, test_ratio=0.1, data_dir=os.path.dirname(current_dir)+'/data')
 
-    study_name = f'{args.encode_model}_{args.decode_model}_{args.activation}_{args.num_layers}_{args.num_epochs}'
+    study_name = f'{args.encode_model}_{args.decode_model}_num_layers_{args.num_layers}_num_hidden_channels_{args.num_hidden_channels}_num_epochs_{args.num_epochs}'
 
     if args.save_study==1:
         study = optuna.create_study(
@@ -156,7 +157,7 @@ def main():
         decode_modelname=args.decode_model, 
         activation = args.activation, 
         self_loop_mask = True,
-        num_hidden_channels = 256, 
+        num_hidden_channels = args.num_hidden_channels, 
         num_layers = args.num_layers, 
         hidden_channels = None, 
         dropout = 0.5,
