@@ -205,7 +205,7 @@ class S_VAE(torch.nn.Module):
         q_z = VonMisesFisher(z_mean, z_var)
         p_z = HypersphericalUniform(z_mean.size(1) - 1)
 
-        return q_z.to(self.device), p_z.to(self.device)
+        return q_z, p_z
 
     def kl_loss(self, q_z=None, p_z=None):
         q_z = self.q_z if q_z is None else q_z

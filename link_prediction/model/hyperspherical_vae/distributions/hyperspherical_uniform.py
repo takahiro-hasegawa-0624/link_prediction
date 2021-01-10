@@ -25,7 +25,7 @@ class HypersphericalUniform(torch.distributions.Distribution):
             torch.Size([dim]), validate_args=validate_args
         )
         self._dim = dim
-        self.device = device
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     def sample(self, shape=torch.Size()):
         output = (
