@@ -47,7 +47,6 @@ class NN(torch.nn.Module):
         self.lins = torch.nn.ModuleList()
 
         self.convs = torch.nn.ModuleList()
-        self.convs.append(torch.nn.Linear(1, 1))
 
         self.batchnorms = torch.nn.ModuleList()
 
@@ -166,7 +165,6 @@ class GCN(torch.nn.Module):
         self.train_pos_edge_adj_t = train_pos_edge_adj_t
 
         self.lins = torch.nn.ModuleList()
-        self.lins.append(torch.nn.Linear(1, 1))
         
         self.convs = torch.nn.ModuleList()
 
