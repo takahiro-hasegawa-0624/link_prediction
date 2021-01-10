@@ -203,7 +203,7 @@ class S_VAE(torch.nn.Module):
         
     def reparameterize(self, z_mean, z_var):
         q_z = VonMisesFisher(z_mean, z_var)
-        p_z = HypersphericalUniform(self.z_dim - 1)
+        p_z = HypersphericalUniform(z_mean.size(1) - 1)
 
         return q_z, p_z
 
