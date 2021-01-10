@@ -288,16 +288,24 @@ class Link_Prediction_Model():
         # optimizerはAdamをdefaultとする。self.my_optimizerで指定可能。
         self.optimizer = {}
         if activation == 'tanh':
-            self.optimizer['decoder_bias'] = torch.optim.Adam(self.decode_model.bias.parameters(), weight_decay=0.2, lr=0.05)
-            self.optimizer['decoder_lins'] = torch.optim.Adam(self.encode_model.lins.parameters(), weight_decay=0.01, lr=0.005)
-            self.optimizer['encoder_convs'] = torch.optim.Adam(self.encode_model.convs.parameters(), weight_decay=0.01, lr=0.005)
-            self.optimizer['encoder_lins'] = torch.optim.Adam(self.encode_model.lins.parameters(), weight_decay=0.01, lr=0.005)
+            if len(self.decode_model.bias)>0:
+                self.optimizer['decoder_bias'] = torch.optim.Adam(self.decode_model.bias.parameters(), weight_decay=0.2, lr=0.05)
+            if len(self.decode_model.lins)>0:
+                self.optimizer['decoder_lins'] = torch.optim.Adam(self.decode_model.lins.parameters(), weight_decay=0.01, lr=0.005)
+            if len(self.encode_model.convs)>0:
+                self.optimizer['encoder_convs'] = torch.optim.Adam(self.encode_model.convs.parameters(), weight_decay=0.01, lr=0.005)
+            if len(self.encode_model.lins)>0:
+                self.optimizer['encoder_lins'] = torch.optim.Adam(self.encode_model.lins.parameters(), weight_decay=0.01, lr=0.005)
 
         else:
-            self.optimizer['decoder_bias'] = torch.optim.Adam(self.decode_model.bias.parameters(), weight_decay=0.01, lr=0.05)
-            self.optimizer['decoder_lins'] = torch.optim.Adam(self.encode_model.lins.parameters(), weight_decay=0.01, lr=0.005)
-            self.optimizer['encoder_convs'] = torch.optim.Adam(self.encode_model.convs.parameters(), weight_decay=0.01, lr=0.005)
-            self.optimizer['encoder_lins'] = torch.optim.Adam(self.encode_model.lins.parameters(), weight_decay=0.01, lr=0.005)
+            if len(self.decode_model.bias)>0:
+                self.optimizer['decoder_bias'] = torch.optim.Adam(self.decode_model.bias.parameters(), weight_decay=0.01, lr=0.05)
+            if len(self.decode_model.lins)>0:
+                self.optimizer['decoder_lins'] = torch.optim.Adam(self.decode_model.lins.parameters(), weight_decay=0.01, lr=0.005)
+            if len(self.encode_model.convs)>0:
+                self.optimizer['encoder_convs'] = torch.optim.Adam(self.encode_model.convs.parameters(), weight_decay=0.01, lr=0.005)
+            if len(self.encode_model.lins)>0:
+                self.optimizer['encoder_lins'] = torch.optim.Adam(self.encode_model.lins.parameters(), weight_decay=0.01, lr=0.005)
 
         # learning rate のscheduler はself.my_schedulerで指定可能。
         self.scheduler = {}
