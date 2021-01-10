@@ -29,7 +29,7 @@ from torch_sparse import SparseTensor
 from torch_geometric.utils import negative_sampling
 
 from link_prediction.model.node_encoder import NN, GCN, GCNII, GCNIIwithJK
-from link_prediction.model.link_decoder import GAE, VGAE, Cat_Linear_Decoder, Mean_Linear_Decoder
+from link_prediction.model.link_decoder import GAE, VGAE, S_VAE, Cat_Linear_Decoder, Mean_Linear_Decoder
 from link_prediction.my_util import my_utils
 
 class Link_Prediction_Model():
@@ -251,6 +251,14 @@ class Link_Prediction_Model():
                 sigmoid_bias_initial_value=sigmoid_bias_initial_value
             ).to(self.device)
 
+        elif self.decode_modelname == 'S_VAE':
+            self.decode_model = S_VAE(
+                encoder = self.encode_model,
+                self_loop_mask = self_loop_mask,
+                sigmoid_bias = sigmoid_bias,
+                sigmoid_bias_initial_value=sigmoid_bias_initial_value
+            ).to(self.device)
+
         elif self.decode_modelname == 'Cat_Linear_Decoder':
             self.decode_model = Cat_Linear_Decoder(
                 encoder = self.encode_model, 
@@ -404,6 +412,8 @@ class Link_Prediction_Model():
             loss = F.binary_cross_entropy(link_probs, self.y_train, weight = self.mask)
             if self.decode_modelname == 'VGAE':
                 loss = loss + (1 / self.data.num_nodes) * self.decode_model.kl_loss()
+            elif self.decode_modelname == 'S_VAE':
+                loss = loss + self.decode_model.kl_loss()
             loss.backward()
             for optimizer in self.optimizer.values():
                 optimizer.step()
@@ -465,6 +475,8 @@ class Link_Prediction_Model():
             loss = F.binary_cross_entropy(link_probs, link_labels, weight = weight)
             if self.decode_modelname == 'VGAE':
                 loss = loss + (1 / self.data.num_nodes) * self.decode_model.kl_loss()
+            elif self.decode_modelname == 'S_VAE':
+                loss = loss + self.decode_model.kl_loss()
             loss.backward()
             for optimizer in self.optimizer.values():
                 if optimizer is not None:
@@ -517,6 +529,8 @@ class Link_Prediction_Model():
         loss = F.binary_cross_entropy(link_probs, link_labels)
         if self.decode_modelname == 'VGAE':
             loss = loss + (1 / self.data.num_nodes) * self.decode_model.kl_loss()
+        elif self.decode_modelname == 'S_VAE':
+            loss = loss + self.decode_model.kl_loss()
         
         return float(loss.cpu()), link_labels.cpu(), link_probs.cpu()
 
@@ -552,6 +566,8 @@ class Link_Prediction_Model():
         loss = F.binary_cross_entropy(link_probs, link_labels)
         if self.decode_modelname == 'VGAE':
             loss = loss + (1 / self.data.num_nodes) * self.decode_model.kl_loss()
+        elif self.decode_modelname == 'S_VAE':
+            loss = loss + self.decode_model.kl_loss()
         
         return float(loss.cpu()), link_labels.cpu(), link_probs.cpu()
 

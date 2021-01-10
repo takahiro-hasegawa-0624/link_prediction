@@ -10,6 +10,9 @@ Todo:
 import torch
 import torch.nn.functional as F
 
+from link_prediction.model.hyperspherical_vae.distributions import VonMisesFisher
+from link_prediction.model.hyperspherical_vae.distributions import HypersphericalUniform
+
 from link_prediction.my_util import my_utils
 
 class Bias(torch.nn.Module):
@@ -145,6 +148,69 @@ class VGAE(GAE):
             max=self.MAX_LOGSTD)
         return -0.5 * torch.mean(
             torch.sum(1 + 2 * logstd - mu**2 - logstd.exp()**2, dim=1))
+
+class S_VAE(torch.nn.Module):
+    
+    def __init__(self, encoder, self_loop_mask = True, sigmoid_bias = False, sigmoid_bias_initial_value=-2.0):
+        """
+        ModelVAE initializer
+        :param h_dim: dimension of the hidden layers
+        :param z_dim: dimension of the latent representation
+        :param activation: callable activation function
+        """
+        super(S_VAE, self).__init__()
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+        self.encoder = encoder
+        self.self_loop_mask = self_loop_mask
+        self.sigmoid_bias = sigmoid_bias
+
+        self.bias = torch.nn.ModuleList()
+        self.bias.append(Bias(initial_value=sigmoid_bias_initial_value))
+        
+    def encode(self, x):
+        z_mean, z_var = self.encoder(*args, **kwargs)
+        self.q_z, self.p_z = self.reparameterize(z_mean, z_var)
+        z = self.q_z.rsample()
+
+        return z
+        
+    def decode(self, z, decode_node_pairs=None):
+        '''
+        gets link probabilities from the outputs of the encode model
+
+        Parameters:
+            z (torch.tensor[num_nodes, output_channels]): node-wise latent features.
+
+        Returns:
+            probs (torch.tensor[num_edges, num_edges]: adjacency matrix of link probabilities.
+        '''
+        if self.sigmoid_bias is True:
+            if self.self_loop_mask is True:
+                probs = torch.sigmoid((self.bias[0](torch.mm(z, z.t()))) * (torch.eye(z.size(0))!=1).to(self.device))
+            else:
+                probs = torch.sigmoid(self.bias[0](torch.mm(z, z.t())))
+        else:
+            if self.self_loop_mask is True:
+                probs = torch.sigmoid((torch.mm(z, z.t())) * (torch.eye(z.size(0))!=1).to(self.device))
+            else:
+                probs = torch.sigmoid(torch.mm(z, z.t()))
+        
+        if decode_node_pairs is not None:
+            return probs[decode_node_pairs.cpu().numpy()].flatten()
+        else:
+            return probs.flatten()
+        
+    def reparameterize(self, z_mean, z_var):
+        q_z = VonMisesFisher(z_mean, z_var)
+        p_z = HypersphericalUniform(self.z_dim - 1)
+
+        return q_z, p_z
+
+    def kl_loss(self, q_z=None, p_z=None):
+        q_z = self.q_z if q_z is None else q_z
+        p_z = self.p_z if p_z is None else p_z
+        return torch.distributions.kl.kl_divergence(q_z, p_z).mean()
 
 class Cat_Linear_Decoder(torch.nn.Module):
     def __init__(self, encoder, in_channels, hidden_channels, out_channels=1, num_layers=2, dropout=0.5, self_loop_mask = True, sigmoid_bias=True, sigmoid_bias_initial_value=-2.0):
