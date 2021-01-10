@@ -93,6 +93,7 @@ def main():
     parser.add_argument('--encode_model', type=str, default='GCNII')
     parser.add_argument('--decode_model', type=str, default='GAE')
     parser.add_argument('--activation', type=str, default='relu')
+    parser.add_argument('--num_layers', type=int, default=32)
     parser.add_argument('--timeout', type=int, default=60*60*12)
     parser.add_argument('--num_epochs', type=int, default=1000)
     parser.add_argument('--weight_decay_min', type=float, default=1e-12)
@@ -155,7 +156,7 @@ def main():
         activation = args.activation, 
         self_loop_mask = True,
         num_hidden_channels = 256, 
-        num_layers = 32, 
+        num_layers = args.num_layers, 
         hidden_channels = None, 
         dropout = 0.5,
         sigmoid_bias = True,
