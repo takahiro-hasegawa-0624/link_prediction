@@ -755,8 +755,11 @@ class Link_Prediction_Model():
         test_fpr, test_tpr, _ = roc_curve(test_link_labels, test_link_probs)
         test_auc = roc_auc_score(test_link_labels, test_link_probs)
 
+        # plot size indicator
+        size=4
+        
         # lossの図示
-        fig, ax = plt.subplots(figsize=(8, 4.5), dpi=150)
+        fig, ax = plt.subplots(figsize=(size, size*9/16), dpi=150)
         ax.axvline(x=epochs, c='crimson')
         ax.plot(np.arange(1, self.num_epochs+1), self.train_loss_list, label='train')
         ax.plot(np.arange(1, self.num_epochs+1), self.val_loss_list, label='validation')
@@ -764,7 +767,7 @@ class Link_Prediction_Model():
         ax.legend()
         ax.set_xlabel('epoch')
         ax.set_ylabel('binary cross entropy loss')
-        ax.set_title(f"Loss ({self.encode_modelname} / {self.decode_modelname} / activation_{self.activation} / layers_{self.num_layers})")
+        ax.set_title(f"{self.decode_modelname}, enc: {self.encode_modelname}, layers: {self.num_layers}, hidden: {self.num_hidden_channels}")
         ax.grid()
         if save:
             fig.savefig(path+'/loss.png')
@@ -774,7 +777,7 @@ class Link_Prediction_Model():
             plt.close()
 
         # AUCの図示
-        fig, ax = plt.subplots(figsize=(8, 4.5), dpi=150)
+        fig, ax = plt.subplots(figsize=(size, size*9/16), dpi=150)
         ax.axvline(x=epochs, c='crimson')
         ax.plot(np.arange(1, self.num_epochs+1), self.train_auc_list, label='train')
         ax.plot(np.arange(1, self.num_epochs+1), self.val_auc_list, label='validation')
@@ -782,7 +785,7 @@ class Link_Prediction_Model():
         ax.legend()
         ax.set_xlabel('epoch')
         ax.set_ylabel('AUC')
-        ax.set_title(f"AUC ({self.encode_modelname} / {self.decode_modelname} / activation_{self.activation} / layers_{self.num_layers})")
+        ax.set_title(f"{self.decode_modelname}, enc: {self.encode_modelname}, layers: {self.num_layers}, hidden: {self.num_hidden_channels}")
         ax.grid()
         if save:
             fig.savefig(path+'/auc.png')
@@ -792,7 +795,7 @@ class Link_Prediction_Model():
             plt.close()
 
         # accuracyの図示
-        fig, ax = plt.subplots(figsize=(8, 4.5), dpi=150)
+        fig, ax = plt.subplots(figsize=(size, size*9/16), dpi=150)
         ax.axvline(x=epochs, c='crimson')
         ax.plot(np.arange(1, self.num_epochs+1), self.train_accuracy_list, label='train')
         ax.plot(np.arange(1, self.num_epochs+1), self.val_accuracy_list, label='validation')
@@ -800,7 +803,7 @@ class Link_Prediction_Model():
         ax.legend()
         ax.set_xlabel('epoch')
         ax.set_ylabel('Accuracy')
-        ax.set_title(f"Accuracy ({self.encode_modelname} / {self.decode_modelname} / activation_{self.activation} / layers_{self.num_layers})")
+        ax.set_title(f"{self.decode_modelname}, enc: {self.encode_modelname}, layers: {self.num_layers}, hidden: {self.num_hidden_channels}")
         ax.grid()
         if save:
             fig.savefig(path+'/accuracy.png')
@@ -810,13 +813,13 @@ class Link_Prediction_Model():
             plt.close()
 
         # ROC曲線の図示
-        fig, ax = plt.subplots(figsize=(10, 10), dpi=150)
+        fig, ax = plt.subplots(figsize=(size*9/16, size*9/16), dpi=150)
         ax.plot(val_fpr, val_tpr, label=f'validation AUC={round(val_auc, 3)}')
         ax.plot(test_fpr, test_tpr, label=f'test AUC={round(test_auc, 3)}')
         ax.legend()
         ax.set_xlabel('FPR: False positive rate')
         ax.set_ylabel('TPR: True positive rate')
-        ax.set_title(f"AUC ({self.encode_modelname} / {self.decode_modelname} / activation_{self.activation} / layers_{self.num_layers})")
+        ax.set_title(f"{self.decode_modelname}, enc: {self.encode_modelname}, layers: {self.num_layers}, hidden: {self.num_hidden_channels}")
         ax.grid()
         if save:
             fig.savefig(path+'/roc.png')
@@ -827,12 +830,12 @@ class Link_Prediction_Model():
 
         # sigmoidのバイアス項の推移を図示
         if self.sigmoid_bias is True:
-            fig, ax = plt.subplots(figsize=(8, 4.5), dpi=150)
+            fig, ax = plt.subplots(figsize=(size, size*9/16), dpi=150)
             ax.axvline(x=epochs, c='crimson')
             ax.plot(np.arange(1, self.num_epochs+1), self.sigmoid_bias_list)
             ax.set_xlabel('epoch')
             ax.set_ylabel('Sigmoid Bias')
-            ax.set_title(f"Sigmoid Bias ({self.encode_modelname} / {self.decode_modelname} / activation_{self.activation} / layers_{self.num_layers})")
+            ax.set_title(f"{self.decode_modelname}, enc: {self.encode_modelname}, layers: {self.num_layers}, hidden: {self.num_hidden_channels}")
             ax.grid()
             if save:
                 fig.savefig(path+'/sigmoid_bias.png')
@@ -842,14 +845,15 @@ class Link_Prediction_Model():
             plt.close()
 
         # 特徴量ベクトルのコサイン類似度のヒストグラムを図示
-        fig, ax = plt.subplots(figsize=(8, 4.5), dpi=150)
+        fig, ax = plt.subplots(figsize=(size, size*9/16), dpi=150)
         inner_product_flatten = inner_product.flatten()
         inner_product_flatten = inner_product_flatten[~np.isinf(inner_product_flatten)]
         ax.hist(inner_product.flatten(), bins=100)
         ax.set_xlim(-1, 1)
         ax.set_xlabel('cosine similarity of the feature vectors')
-        ax.set_title(f"Cosine Similarity of feature vectors ({self.encode_modelname} / {self.decode_modelname} / activation_{self.activation} / layers_{self.num_layers})")
+        ax.set_title(f"{self.decode_modelname}, enc: {self.encode_modelname}, layers: {self.num_layers}, hidden: {self.num_hidden_channels}")
         ax.grid(axis='x')
+        ax.axes.yaxis.set_visible(False)
         if save:
             fig.savefig(path+'/cos_similarity.png')
         if 'ipykernel' in sys.modules:
@@ -858,12 +862,12 @@ class Link_Prediction_Model():
             plt.close()
 
         # 特徴量ベクトルのノルムの平均値を図示
-        # fig, ax = plt.subplots(figsize=(8, 4.5), dpi=150)
+        # fig, ax = plt.subplots(figsize=(size, size*9/16), dpi=150)
         # ax.axvline(x=epochs, c='crimson')
         # ax.plot(np.arange(1, self.num_epochs+1), self.feature_distances_list)
         # ax.set_xlabel('epoch')
         # ax.set_ylabel('Average norm')
-        # ax.set_title(f"Average norm of feature vectors ({self.encode_modelname} / {self.decode_modelname} / activation_{self.activation} / layers_{self.num_layers})")
+        # ax.set_title(f"{self.decode_modelname}, enc: {self.encode_modelname}, layers: {self.num_layers}, hidden: {self.num_hidden_channels}")
         # ax.grid()
         # if save:
         #     fig.savefig(path+'/average_norm.png')
@@ -873,13 +877,13 @@ class Link_Prediction_Model():
         #     plt.close()
 
         # 特徴量ベクトルのノルムのヒストグラムを図示
-        fig, ax = plt.subplots(figsize=(8, 4.5), dpi=150)
+        fig, ax = plt.subplots(figsize=(size, size*9/16), dpi=150)
         z_norm_flatten = z_norm.flatten()
         z_norm_flatten = z_norm_flatten[~np.isinf(z_norm_flatten)]
         ax.hist(z_norm_flatten, bins=100)
-        ax.set_xscale('log')
+        # ax.set_xscale('log')
         ax.set_xlabel('norms of the feature vectors')
-        ax.set_title(f"Norms of feature vectors ({self.encode_modelname} / {self.decode_modelname} / activation_{self.activation} / layers_{self.num_layers})")
+        ax.set_title(f"{self.decode_modelname}, enc: {self.encode_modelname}, layers: {self.num_layers}, hidden: {self.num_hidden_channels}")
         ax.grid(axis='x')
         if save:
             fig.savefig(path+'/norm.png')
@@ -892,13 +896,13 @@ class Link_Prediction_Model():
         # tsne = TSNE(n_components=2, random_state = 42, perplexity = 30, n_iter = 1000)
         # z_embedded = tsne.fit_transform(z)
 
-        # fig, ax = plt.subplots(figsize=(10, 10), dpi=150)
+        # fig, ax = plt.subplots(figsize=(size*9/16, size*9/16), dpi=150)
         # for X in z_embedded[self.all_pos_edge_index.cpu().numpy().T]:
         #     ax.plot(X.T[0], X.T[1], c='gray', linewidth=0.05, alpha=0.4)
         # ax.scatter(z_embedded.T[0], z_embedded.T[1], s=1)
         # ax.axes.xaxis.set_visible(False)
         # ax.axes.yaxis.set_visible(False)
-        # ax.set_title(f"t-SNE of feature vectors with edge ({self.encode_modelname} / {self.decode_modelname} / activation_{self.activation} / layers_{self.num_layers})")
+        # ax.set_title(f"{self.decode_modelname}, enc: {self.encode_modelname}, layers: {self.num_layers}, hidden: {self.num_hidden_channels}")
         # if save:
         #     fig.savefig(path+'/t-sne.png')
         # if 'ipykernel' in sys.modules:
