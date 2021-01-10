@@ -14,13 +14,13 @@ def get_optimizer(trial, model, args):
 
     weight_decay = trial.suggest_loguniform('weight_decay', args.weight_decay_min, args.weight_decay_max)
     lr = trial.suggest_uniform('lr', args.lr_min, args.lr_max)
-    optimizer['convs'] = torch.optim.Adam(model.encode_model.convs.parameters(), weight_decay=weight_decay, lr=lr)
-    optimizer['lins'] = torch.optim.Adam(model.encode_model.lins.parameters(), weight_decay=weight_decay, lr=lr)
+    optimizer['encoder_convs'] = torch.optim.Adam(model.encode_model.convs.parameters(), weight_decay=weight_decay, lr=lr)
+    optimizer['encoder_lins'] = torch.optim.Adam(model.encode_model.lins.parameters(), weight_decay=weight_decay, lr=lr)
 
     if args.decode_model != 'Cat_Linear_Decoder':
         weight_decay_bias = trial.suggest_loguniform('weight_decay_bias', args.weight_decay_bias_min, args.weight_decay_bias_max)
         lr_bias = trial.suggest_uniform('lr_bias', args.lr_bias_min, args.lr_bias_max)
-        optimizer['bias'] = torch.optim.Adam(model.decode_model.bias.parameters(), weight_decay=weight_decay_bias, lr=lr_bias)
+        optimizer['decoder_bias'] = torch.optim.Adam(model.decode_model.bias.parameters(), weight_decay=weight_decay_bias, lr=lr_bias)
 
     if args.decode_model == 'Cat_Linear_Decoder':
         weight_decay_decoder = trial.suggest_loguniform('weight_decay_decoder', args.weight_decay_decoder_min, args.weight_decay_decoder_max)
@@ -33,7 +33,7 @@ def get_scheduler(trial, model, args):
     scheduler = {}
     if args.decode_model != 'Cat_Linear_Decoder':
         bias_gamma = trial.suggest_uniform('bias_gamma', args.bias_gamma_min, args.bias_gamma_max)
-        scheduler['bias'] = torch.optim.lr_scheduler.ExponentialLR(model.optimizer['bias'], gamma=bias_gamma)
+        scheduler['decoder_bias'] = torch.optim.lr_scheduler.ExponentialLR(model.optimizer['decoder_bias'], gamma=bias_gamma)
 
     if args.decode_model == 'Cat_Linear_Decoder':
         decoder_gamma = trial.suggest_uniform('decoder_gamma', args.decoder_gamma_min, args.decoder_gamma_max)
@@ -41,8 +41,8 @@ def get_scheduler(trial, model, args):
 
     if args.lins_convs_scheduler == 1:
         lins_convs_gamma = trial.suggest_uniform('lins_convs_gamma', args.lins_convs_gamma_min, args.lins_convs_gamma_max)
-        scheduler['convs'] = torch.optim.lr_scheduler.StepLR(model.optimizer['convs'], step_size=args.lins_convs_step_size, gamma=lins_convs_gamma)
-        scheduler['lins'] = torch.optim.lr_scheduler.StepLR(model.optimizer['lins'], step_size=args.lins_convs_step_size, gamma=lins_convs_gamma)
+        scheduler['encoder_convs'] = torch.optim.lr_scheduler.StepLR(model.optimizer['encoder_convs'], step_size=args.lins_convs_step_size, gamma=lins_convs_gamma)
+        scheduler['encoder_lins'] = torch.optim.lr_scheduler.StepLR(model.optimizer['encoder_lins'], step_size=args.lins_convs_step_size, gamma=lins_convs_gamma)
 
     return scheduler
 
@@ -167,21 +167,21 @@ def main():
 
     optimizer = {}
     if args.decode_model != 'Cat_Linear_Decoder':
-        optimizer['bias'] = torch.optim.Adam(model.decode_model.bias.parameters(), weight_decay=study.best_params['weight_decay_bias'], lr=study.best_params['lr_bias'])
+        optimizer['decoder_bias'] = torch.optim.Adam(model.decode_model.bias.parameters(), weight_decay=study.best_params['weight_decay_bias'], lr=study.best_params['lr_bias'])
     if args.decode_model == 'Cat_Linear_Decoder':
         optimizer['decoder_lins'] = torch.optim.Adam(model.decode_model.lins.parameters(), weight_decay=study.best_params['weight_decay_decoder'], lr=study.best_params['lr_decoder'])
-    optimizer['convs'] = torch.optim.Adam(model.encode_model.convs.parameters(), weight_decay=study.best_params['weight_decay'], lr=study.best_params['lr'])
-    optimizer['lins'] = torch.optim.Adam(model.encode_model.lins.parameters(), weight_decay=study.best_params['weight_decay'], lr=study.best_params['lr'])
+    optimizer['encoder_convs'] = torch.optim.Adam(model.encode_model.convs.parameters(), weight_decay=study.best_params['weight_decay'], lr=study.best_params['lr'])
+    optimizer['encoder_lins'] = torch.optim.Adam(model.encode_model.lins.parameters(), weight_decay=study.best_params['weight_decay'], lr=study.best_params['lr'])
     model.my_optimizer(optimizer)
 
     scheduler = {}
     if args.decode_model != 'Cat_Linear_Decoder':
-        scheduler['bias'] = torch.optim.lr_scheduler.ExponentialLR(model.optimizer['bias'], gamma=study.best_params['bias_gamma'])
+        scheduler['decoder_bias'] = torch.optim.lr_scheduler.ExponentialLR(model.optimizer['decoder_bias'], gamma=study.best_params['bias_gamma'])
     if args.decode_model == 'Cat_Linear_Decoder':
         scheduler['decoder_lins'] = torch.optim.lr_scheduler.ExponentialLR(model.optimizer['decoder_lins'], gamma=study.best_params['decoder_gamma'])
     if args.lins_convs_scheduler == 1:
-        scheduler['convs'] = torch.optim.lr_scheduler.MultiStepLR(model.optimizer['convs'], milestones=[1000,2000], gamma=study.best_params['lins_convs_gamma'])
-        scheduler['lins'] = torch.optim.lr_scheduler.MultiStepLR(model.optimizer['lins'], milestones=[1000,2000], gamma=study.best_params['lins_convs_gamma'])
+        scheduler['encoder_convs'] = torch.optim.lr_scheduler.MultiStepLR(model.optimizer['encoder_convs'], milestones=[1000,2000], gamma=study.best_params['lins_convs_gamma'])
+        scheduler['encoder_lins'] = torch.optim.lr_scheduler.MultiStepLR(model.optimizer['encoder_lins'], milestones=[1000,2000], gamma=study.best_params['lins_convs_gamma'])
     model.my_scheduler(scheduler)
         
     model.run_training(num_epochs=5000, print_log=True, save_dir=current_dir)
