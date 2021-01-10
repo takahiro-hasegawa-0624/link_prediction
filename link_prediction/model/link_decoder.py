@@ -168,7 +168,7 @@ class S_VAE(torch.nn.Module):
         self.bias = torch.nn.ModuleList()
         self.bias.append(Bias(initial_value=sigmoid_bias_initial_value))
         
-    def encode(self, x):
+    def encode(self, *args, **kwargs):
         z_mean, z_var = self.encoder(*args, **kwargs)
         self.q_z, self.p_z = self.reparameterize(z_mean, z_var)
         z = self.q_z.rsample()
