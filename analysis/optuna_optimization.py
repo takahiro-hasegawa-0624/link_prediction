@@ -90,6 +90,7 @@ def run_objective(args, model):
 
 def main():
     parser = argparse.ArgumentParser(description='execute optuna studying')
+    parser.add_argument('--dataset', type=str, default='Cora')
     parser.add_argument('--encode_model', type=str, default='GCNII')
     parser.add_argument('--decode_model', type=str, default='GAE')
     parser.add_argument('--activation', type=str, default='relu')
@@ -127,9 +128,9 @@ def main():
 
     current_dir = os.path.dirname(os.path.abspath(__file__))
 
-    model = Link_Prediction_Model(dataset_name='Cora', val_ratio=0.05, test_ratio=0.1, data_dir=os.path.dirname(current_dir)+'/data')
+    model = Link_Prediction_Model(dataset_name=args.dataset, val_ratio=0.05, test_ratio=0.1, data_dir=os.path.dirname(current_dir)+'/data')
 
-    study_name = f'{args.encode_model}_{args.decode_model}_{args.activation}_{args.num_epochs}_{args.lins_convs_scheduler}'
+    study_name = f'{args.encode_model}_{args.decode_model}_{args.activation}_{args.num_layers}_{args.num_epochs}'
 
     if args.save_study==1:
         study = optuna.create_study(
