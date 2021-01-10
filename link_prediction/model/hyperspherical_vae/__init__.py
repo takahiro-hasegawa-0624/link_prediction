@@ -1,2 +1,2 @@
-import hyperspherical_vae.ops
-import hyperspherical_vae.distributions
+import link_prediction.model.hyperspherical_vae.ops
+import link_prediction.model.hyperspherical_vae.distributions
