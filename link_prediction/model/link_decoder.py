@@ -170,6 +170,8 @@ class S_VAE(torch.nn.Module):
         
     def encode(self, *args, **kwargs):
         z_mean, z_var = self.encoder(*args, **kwargs)
+        z_mean = z_mean / z_mean.norm(dim=-1, keepdim=True)
+        z_var = F.softplus(self.fc_var(x)) + 1
         self.q_z, self.p_z = self.reparameterize(z_mean, z_var)
         z = self.q_z.rsample()
 
@@ -203,7 +205,7 @@ class S_VAE(torch.nn.Module):
         
     def reparameterize(self, z_mean, z_var):
         q_z = VonMisesFisher(z_mean, z_var)
-        p_z = HypersphericalUniform(z_mean.size(1) - 1)
+        p_z = HypersphericalUniform(z_mean.size(1) - 1).sample()
 
         return q_z, p_z
 
