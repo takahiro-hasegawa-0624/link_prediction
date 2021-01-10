@@ -173,7 +173,7 @@ class S_VAE(torch.nn.Module):
         z_mean = z_mean / z_mean.norm(dim=-1, keepdim=True)
         z_var = F.softplus(z_var) + 1
         self.q_z, self.p_z = self.reparameterize(z_mean, z_var)
-        z = self.q_z
+        z = self.q_z.rsample()
 
         return z
         
@@ -204,15 +204,14 @@ class S_VAE(torch.nn.Module):
             return probs.flatten()
         
     def reparameterize(self, z_mean, z_var):
-        q_z = VonMisesFisher(z_mean, z_var).rsample()
-        p_z = HypersphericalUniform(z_mean.size(1) - 1).sample()
+        q_z = VonMisesFisher(z_mean, z_var)
+        p_z = HypersphericalUniform(z_mean.size(1) - 1)
 
         return q_z, p_z
 
     def kl_loss(self, q_z=None, p_z=None):
         q_z = self.q_z if q_z is None else q_z
         p_z = self.p_z if p_z is None else p_z
-        print(q_z, p_z)
         return torch.distributions.kl.kl_divergence(q_z, p_z).mean()
 
 class Cat_Linear_Decoder(torch.nn.Module):
