@@ -757,6 +757,9 @@ class Link_Prediction_Model():
 
         # plot size indicator
         size=4
+
+        parameters = {'axes.titlesize': 10}
+        plt.rcParams.update(parameters)
         
         # lossの図示
         fig, ax = plt.subplots(figsize=(size, size*9/16), dpi=150)
