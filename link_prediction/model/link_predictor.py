@@ -133,7 +133,7 @@ class Link_Prediction_Model():
                 decode_modelname,
                 activation = None, 
                 sigmoid_bias = False,
-                sigmoid_bias_initial_value=-2.0,
+                sigmoid_bias_initial_value=0,
                 self_loop_mask = False, 
                 num_hidden_channels = None, 
                 num_layers = None, 
