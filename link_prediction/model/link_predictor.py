@@ -813,7 +813,7 @@ class Link_Prediction_Model():
             plt.close()
 
         # ROC曲線の図示
-        fig, ax = plt.subplots(figsize=(size*9/16, size*9/16), dpi=150)
+        fig, ax = plt.subplots(figsize=(size, size), dpi=150)
         ax.plot(val_fpr, val_tpr, label=f'validation AUC={round(val_auc, 3)}')
         ax.plot(test_fpr, test_tpr, label=f'test AUC={round(test_auc, 3)}')
         ax.legend()
@@ -896,7 +896,7 @@ class Link_Prediction_Model():
         # tsne = TSNE(n_components=2, random_state = 42, perplexity = 30, n_iter = 1000)
         # z_embedded = tsne.fit_transform(z)
 
-        # fig, ax = plt.subplots(figsize=(size*9/16, size*9/16), dpi=150)
+        # fig, ax = plt.subplots(figsize=(size, size), dpi=150)
         # for X in z_embedded[self.all_pos_edge_index.cpu().numpy().T]:
         #     ax.plot(X.T[0], X.T[1], c='gray', linewidth=0.05, alpha=0.4)
         # ax.scatter(z_embedded.T[0], z_embedded.T[1], s=1)
