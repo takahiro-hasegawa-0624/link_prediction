@@ -171,7 +171,7 @@ class S_VAE(torch.nn.Module):
     def encode(self, *args, **kwargs):
         z_mean, z_var = self.encoder(*args, **kwargs)
         z_mean = z_mean / z_mean.norm(dim=-1, keepdim=True)
-        z_var = F.softplus(self.fc_var(x)) + 1
+        z_var = F.softplus(z_var) + 1
         self.q_z, self.p_z = self.reparameterize(z_mean, z_var)
         z = self.q_z.rsample()
 
