@@ -210,6 +210,7 @@ class S_VAE(torch.nn.Module):
     def kl_loss(self, q_z=None, p_z=None):
         q_z = self.q_z if q_z is None else q_z
         p_z = self.p_z if p_z is None else p_z
+        print(torch.distributions.kl.kl_divergence(q_z, p_z))
         return torch.distributions.kl.kl_divergence(q_z, p_z).mean()
 
 class Cat_Linear_Decoder(torch.nn.Module):
