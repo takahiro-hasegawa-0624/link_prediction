@@ -441,7 +441,7 @@ class Link_Prediction_Model():
                 link_probs[torch.isnan(link_probs)]=1.0
 
             loss = F.binary_cross_entropy(link_probs, self.y_train, weight = self.mask)
-            if self.decode_modelname in ['VGAE', 'Shifted-VGAE':
+            if self.decode_modelname in ['VGAE', 'Shifted-VGAE']:
                 loss = loss + (1 / self.data.num_nodes) * self.decode_model.kl_loss()
             elif self.decode_modelname == 'S_VAE':
                 loss = loss + self.decode_model.kl_loss()
