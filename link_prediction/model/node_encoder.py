@@ -62,7 +62,7 @@ class NN(torch.nn.Module):
             for _ in range(num_layers - 1):
                 self.batchnorms.append(torch.nn.BatchNorm1d(num_hidden_channels))
 
-            if self.decode_modelname == 'VGAE':
+            if self.decode_modelname in ['VGAE', 'Shifted-VGAE']:
                 self.lins.append(torch.nn.Linear(num_hidden_channels, num_hidden_channels))
             if self.decode_modelname == 'S_VAE':
                 self.lins.append(torch.nn.Linear(num_hidden_channels, 1))
@@ -82,7 +82,7 @@ class NN(torch.nn.Module):
             for i in range(len(hidden_channels) - 1):
                 self.batchnorms.append(torch.nn.BatchNorm1d(hidden_channels[i]))
 
-            if self.decode_modelname == 'VGAE':
+            if self.decode_modelname in ['VGAE', 'Shifted-VGAE']:
                 self.lins.append(torch.nn.Linear(hidden_channels[-2], hidden_channels[-1]))
             if self.decode_modelname == 'S_VAE':
                 self.lins.append(torch.nn.Linear(hidden_channels[-2], 1))
@@ -101,7 +101,7 @@ class NN(torch.nn.Module):
             z (torch.tensor[num_nodes, output_channels]): node-wise latent features.
         '''
         z = x
-        if self.decode_modelname in ['VGAE', 'S_VAE']:
+        if self.decode_modelname in ['VGAE', 'Shifted-VGAE', 'S_VAE']:
             for i, lin in enumerate(self.lins[:-2]):
                 z = F.dropout(z, self.dropout, training = self.training)
                 z = lin(z)
@@ -181,7 +181,7 @@ class GCN(torch.nn.Module):
             for _ in range(num_layers - 1):
                 self.batchnorms.append(torch.nn.BatchNorm1d(num_hidden_channels))
 
-            if self.decode_modelname == 'VGAE':
+            if self.decode_modelname in ['VGAE', 'Shifted-VGAE']:
                 self.convs.append(GCNConv(num_hidden_channels, num_hidden_channels))
             if self.decode_modelname == 'S_VAE':
                 self.convs.append(GCNConv(num_hidden_channels, 1))
@@ -201,7 +201,7 @@ class GCN(torch.nn.Module):
             for i in range(len(hidden_channels) - 1):
                 self.batchnorms.append(torch.nn.BatchNorm1d(hidden_channels[i]))
 
-            if self.decode_modelname == 'VGAE':
+            if self.decode_modelname in ['VGAE', 'Shifted-VGAE']:
                 self.convs.append(GCNConv(hidden_channels[-2], hidden_channels[-1]))
             if self.decode_modelname == 'S_VAE':
                 self.convs.append(GCNConv(hidden_channels[-2], 1))
@@ -222,7 +222,7 @@ class GCN(torch.nn.Module):
             edge_index = self.train_pos_edge_adj_t
 
         z = x
-        if self.decode_modelname in ['VGAE', 'S_VAE']:
+        if self.decode_modelname in ['VGAE', 'Shifted-VGAE', 'S_VAE']:
             for i, conv in enumerate(self.convs[:-2]):
                 z = F.dropout(z, self.dropout, training = self.training)
                 z = conv(z, edge_index)
@@ -297,7 +297,7 @@ class GCNII(torch.nn.Module):
         for layer in range(num_layers):
             self.convs.append(GCN2Conv(num_hidden_channels, alpha, theta, layer+1, shared_weights = shared_weights, normalize = False))
 
-        if self.decode_modelname == 'VGAE':
+        if self.decode_modelname in ['VGAE', 'Shifted-VGAE']:
             self.convs.append(GCN2Conv(num_hidden_channels, alpha, theta, layer+1, shared_weights = shared_weights, normalize = False))
         if self.decode_modelname == 'S_VAE':
             self.convs.append(GCNConv(num_hidden_channels, 1))
@@ -326,7 +326,7 @@ class GCNII(torch.nn.Module):
 
         x_0 = z
 
-        if self.decode_modelname in ['VGAE', 'S_VAE']:
+        if self.decode_modelname in ['VGAE', 'Shifted-VGAE', 'S_VAE']:
             for i, conv in enumerate(self.convs[:-2]):
                 z = F.dropout(z, self.dropout, training = self.training)
                 z = conv(z, x_0, edge_index)
@@ -338,7 +338,7 @@ class GCNII(torch.nn.Module):
                 elif self.activation == "tanh":
                     z = torch.tanh(z)
 
-            if self.decode_modelname == 'VGAE':
+            if self.decode_modelname in ['VGAE', 'Shifted-VGAE']:
                 return self.convs[-2](z, x_0, edge_index), self.convs[-1](z, x_0, edge_index)
             else:
                 return self.convs[-2](z, x_0, edge_index), self.convs[-1](z, edge_index)
@@ -408,7 +408,7 @@ class GCNIIwithJK(torch.nn.Module):
         for layer in range(num_layers):
             self.convs.append(GCN2Conv(num_hidden_channels, alpha, theta, layer+1, shared_weights = shared_weights, normalize = False))
 
-        if self.decode_modelname == 'VGAE':
+        if self.decode_modelname in ['VGAE', 'Shifted-VGAE']:
             self.convs.append(GCN2Conv(num_hidden_channels, alpha, theta, layer+1, shared_weights = shared_weights, normalize = False))
 
         self.jk_mode = jk_mode
@@ -444,7 +444,7 @@ class GCNIIwithJK(torch.nn.Module):
 
         x_0 = z
 
-        if self.decode_modelname == 'VGAE':
+        if self.decode_modelname in ['VGAE', 'Shifted-VGAE']:
             zs = []
             for i, conv in enumerate(self.convs[:-2]):
                 z = F.dropout(z, self.dropout, training = self.training)
