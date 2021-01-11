@@ -260,7 +260,7 @@ class Link_Prediction_Model():
             ).to(self.device)
 
         if self.decode_modelname == 'Shifted-VGAE':
-            self.decode_model = GAE(
+            self.decode_model = VGAE(
                 encoder = self.encode_model,
                 self_loop_mask = self_loop_mask,
                 sigmoid_bias = True,
