@@ -653,9 +653,9 @@ class Link_Prediction_Model():
             val_auc = roc_auc_score(val_link_labels, val_link_probs)
             test_auc = roc_auc_score(test_link_labels, test_link_probs)
 
-            train_precision = precision_score(train_link_labels, (train_link_probs>self.threshold))
-            val_precision = precision_score(val_link_labels, (val_link_probs>self.threshold))
-            test_precision = precision_score(test_link_labels, (test_link_probs>self.threshold))
+            train_precision = precision_score(train_link_labels, (train_link_probs>self.threshold), zero_division=0)
+            val_precision = precision_score(val_link_labels, (val_link_probs>self.threshold), zero_division=0)
+            test_precision = precision_score(test_link_labels, (test_link_probs>self.threshold), zero_division=0)
 
             # tmp_index = np.arange(z.shape[0])
             # xx, yy = np.meshgrid(tmp_index, tmp_index)
