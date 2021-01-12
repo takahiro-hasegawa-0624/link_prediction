@@ -676,7 +676,7 @@ class Link_Prediction_Model():
             
             # validationデータによる評価が良いモデルを保存
             if val_auc + val_precision > self.best_val:
-                self.best_val = val_auc
+                self.best_val = val_auc + val_precision
                 self.best_epoch = epoch
 
                 if print_log is True:
