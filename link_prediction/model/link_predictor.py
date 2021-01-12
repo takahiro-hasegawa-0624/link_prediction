@@ -235,6 +235,7 @@ class Link_Prediction_Model():
                 dropout=dropout
             ).to(self.device)
 
+
         if self.decode_modelname == 'GAE':
             self.decode_model = GAE(
                 encoder = self.encode_model,
@@ -243,7 +244,7 @@ class Link_Prediction_Model():
                 sigmoid_bias_initial_value=sigmoid_bias_initial_value
             ).to(self.device)
 
-        if self.decode_modelname == 'Shifted-GAE':
+        elif self.decode_modelname == 'Shifted-GAE':
             self.decode_model = GAE(
                 encoder = self.encode_model,
                 self_loop_mask = self_loop_mask,
@@ -259,7 +260,7 @@ class Link_Prediction_Model():
                 sigmoid_bias_initial_value=sigmoid_bias_initial_value
             ).to(self.device)
 
-        if self.decode_modelname == 'Shifted-VGAE':
+        elif self.decode_modelname == 'Shifted-VGAE':
             self.decode_model = VGAE(
                 encoder = self.encode_model,
                 self_loop_mask = self_loop_mask,
@@ -675,7 +676,7 @@ class Link_Prediction_Model():
             self.test_precision_list.append(test_precision)
             
             # validationデータによる評価が良いモデルを保存
-            if val_auc > self.best_val:
+            if (val_auc > self.best_val) and (val_precision!=0):
                 self.best_val = val_auc
                 self.best_epoch = epoch
 
