@@ -19,7 +19,7 @@ import itertools
 
 import matplotlib.pyplot as plt
 
-from sklearn.metrics import roc_auc_score, roc_curve, confusion_matrix, accuracy_score
+from sklearn.metrics import roc_auc_score, roc_curve, confusion_matrix, accuracy_score, precision_score
 from sklearn.manifold import TSNE
 
 import torch
@@ -81,9 +81,9 @@ class Link_Prediction_Model():
         val_auc_list (list of float): validationのaucの配列.
         test_auc_list (list of float): testのaucの配列.
 
-        train_accuracy_list (list of float): trainのaccuracyの配列.
-        val_accuracy_list (list of float): valのaccuracyの配列.
-        test_accuracy_list (list of float): testのaccuracyの配列.
+        train_precision_list (list of float): trainのprecisionの配列.
+        val_precision_list (list of float): valのprecisionの配列.
+        test_precision_list (list of float): testのprecisionの配列.
 
         summary (pd.DataFrame): 学習結果を集約するDataFrame. csvとして保存.
     '''  
@@ -371,9 +371,9 @@ class Link_Prediction_Model():
         self.val_auc_list = []
         self.test_auc_list = []
 
-        self.train_accuracy_list = []
-        self.val_accuracy_list = []
-        self.test_accuracy_list = []
+        self.train_precision_list = []
+        self.val_precision_list = []
+        self.test_precision_list = []
         
         self.logs=''
 
@@ -653,9 +653,9 @@ class Link_Prediction_Model():
             val_auc = roc_auc_score(val_link_labels, val_link_probs)
             test_auc = roc_auc_score(test_link_labels, test_link_probs)
 
-            train_accuracy = accuracy_score(train_link_labels, (train_link_probs>self.threshold))
-            val_accuracy = accuracy_score(val_link_labels, (val_link_probs>self.threshold))
-            test_accuracy = accuracy_score(test_link_labels, (test_link_probs>self.threshold))
+            train_precision = precision_score(train_link_labels, (train_link_probs>self.threshold))
+            val_precision = precision_score(val_link_labels, (val_link_probs>self.threshold))
+            test_precision = precision_score(test_link_labels, (test_link_probs>self.threshold))
 
             # tmp_index = np.arange(z.shape[0])
             # xx, yy = np.meshgrid(tmp_index, tmp_index)
@@ -670,17 +670,17 @@ class Link_Prediction_Model():
             self.val_auc_list.append(val_auc)
             self.test_auc_list.append(test_auc)
 
-            self.train_accuracy_list.append(train_accuracy)
-            self.val_accuracy_list.append(val_accuracy)
-            self.test_accuracy_list.append(test_accuracy)
+            self.train_precision_list.append(train_precision)
+            self.val_precision_list.append(val_precision)
+            self.test_precision_list.append(test_precision)
             
             # validationデータによる評価が良いモデルを保存
-            if val_auc > self.best_val:
+            if val_auc + val_precision > self.best_val:
                 self.best_val = val_auc
                 self.best_epoch = epoch
 
                 if print_log is True:
-                    print(f'Best Epoch: {self.best_epoch}, Best Val Score: {self.best_val}, Test Score: {test_auc}')
+                    print(f'Best Epoch: {self.best_epoch}, Val AUC: {val_auc}, Val Precision: {val_precision}, Test AUC: {test_auc}, Test Precision: {test_precision}')
                 with open(f"{self.path_best_model}/best_model.pkl", 'wb') as f:
                     cloudpickle.dump(self.decode_model, f)
 
@@ -813,19 +813,19 @@ class Link_Prediction_Model():
         else:
             plt.close()
 
-        # accuracyの図示
+        # precisionの図示
         fig, ax = plt.subplots(figsize=(size, size*9/16), dpi=150)
         ax.axvline(x=epochs, c='crimson')
-        ax.plot(np.arange(1, self.num_epochs+1), self.train_accuracy_list, label='train')
-        ax.plot(np.arange(1, self.num_epochs+1), self.val_accuracy_list, label='validation')
-        ax.plot(np.arange(1, self.num_epochs+1), self.test_accuracy_list, label='test')
+        ax.plot(np.arange(1, self.num_epochs+1), self.train_precision_list, label='train')
+        ax.plot(np.arange(1, self.num_epochs+1), self.val_precision_list, label='validation')
+        ax.plot(np.arange(1, self.num_epochs+1), self.test_precision_list, label='test')
         ax.legend()
         ax.set_xlabel('epoch')
-        ax.set_ylabel('Accuracy')
+        ax.set_ylabel('precision')
         ax.set_title(f"{self.decode_modelname}, enc: {self.encode_modelname}, layers: {self.num_layers}, hidden: {self.num_hidden_channels}")
         ax.grid()
         if save:
-            fig.savefig(path+'/accuracy.png')
+            fig.savefig(path+'/precision.png')
         if 'ipykernel' in sys.modules:
             plt.show()
         else:
