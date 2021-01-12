@@ -675,8 +675,8 @@ class Link_Prediction_Model():
             self.test_precision_list.append(test_precision)
             
             # validationデータによる評価が良いモデルを保存
-            if val_auc + val_precision > self.best_val:
-                self.best_val = val_auc + val_precision
+            if val_auc > self.best_val:
+                self.best_val = val_auc
                 self.best_epoch = epoch
 
                 if print_log is True:
@@ -785,7 +785,7 @@ class Link_Prediction_Model():
         ax.plot(np.arange(1, self.num_epochs+1), self.test_loss_list, label='test')
         ax.legend()
         ax.set_xlabel('epoch')
-        ax.set_ylabel('binary cross entropy loss')
+        ax.set_ylabel('binary cross entropy')
         ax.set_title(f"{self.decode_modelname}, enc: {self.encode_modelname}, layers: {self.num_layers}, hidden: {self.num_hidden_channels}")
         ax.grid()
         if save:
@@ -853,7 +853,7 @@ class Link_Prediction_Model():
             ax.axvline(x=epochs, c='crimson')
             ax.plot(np.arange(1, self.num_epochs+1), self.sigmoid_bias_list)
             ax.set_xlabel('epoch')
-            ax.set_ylabel('Sigmoid Bias')
+            ax.set_ylabel('sigmoid bias')
             ax.set_title(f"{self.decode_modelname}, enc: {self.encode_modelname}, layers: {self.num_layers}, hidden: {self.num_hidden_channels}")
             ax.grid()
             if save:
