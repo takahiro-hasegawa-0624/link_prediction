@@ -598,7 +598,7 @@ class Link_Prediction_Model():
         if self.decode_modelname in ['VGAE', 'Shifted-VGAE']:
             loss = loss + (1 / self.data.num_nodes) * self.decode_model.kl_loss()
         elif self.decode_modelname == 'S_VAE':
-            loss = loss + self.decode_model.kl_loss()
+            loss = loss + (1 / self.data.num_nodes) * self.decode_model.kl_loss()
         
         return float(loss.cpu()), link_labels.cpu(), link_probs.cpu()
 
