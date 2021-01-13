@@ -105,7 +105,7 @@ def main():
     parser.add_argument('--weight_decay_decoder_min', type=float, default=1e-10)
     parser.add_argument('--weight_decay_decoder_max', type=float, default=1e-3)
     parser.add_argument('--lr_min', type=float, default=1e-3)
-    parser.add_argument('--lr_max', type=float, default=5e-1)
+    parser.add_argument('--lr_max', type=float, default=1.0)
     parser.add_argument('--lr_bias_min', type=float, default=1e-3)
     parser.add_argument('--lr_bias_max', type=float, default=1e-1)
     parser.add_argument('--lr_decoder_min', type=float, default=1e-3)
