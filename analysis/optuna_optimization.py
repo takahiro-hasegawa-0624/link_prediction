@@ -124,7 +124,6 @@ def main():
     parser.add_argument('--gcnii_theta_max', type=float, default=1.5)
     parser.add_argument('--save_study', type=int, default=1)
     parser.add_argument('--read_strage_only', type=int, default=0)
-    parser.add_argument('--load_if_exists', type=int, default=1)
 
     args = parser.parse_args()
 
@@ -138,7 +137,7 @@ def main():
         study = optuna.create_study(
             study_name=study_name,
             storage='sqlite:///optuna_study.db',
-            load_if_exists=True if args.load_if_exists==1 else False
+            load_if_exists=True
         )
     else:
         study = optuna.create_study()
