@@ -240,7 +240,7 @@ class Link_Prediction_Model():
             self.decode_model = GAE(
                 encoder = self.encode_model,
                 self_loop_mask = self_loop_mask,
-                sigmoid_bias = False,
+                sigmoid_bias = sigmoid_bias,
                 sigmoid_bias_initial_value=sigmoid_bias_initial_value
             ).to(self.device)
 
@@ -256,7 +256,7 @@ class Link_Prediction_Model():
             self.decode_model = VGAE(
                 encoder = self.encode_model,
                 self_loop_mask = self_loop_mask,
-                sigmoid_bias = False,
+                sigmoid_bias = sigmoid_bias,
                 sigmoid_bias_initial_value=sigmoid_bias_initial_value
             ).to(self.device)
 

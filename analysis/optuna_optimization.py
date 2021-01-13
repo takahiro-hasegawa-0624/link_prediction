@@ -66,8 +66,8 @@ def run_objective(args, model):
             decode_modelname=args.decode_model, 
             activation = args.activation, 
             self_loop_mask = True,
-            num_hidden_channels = 256, 
-            num_layers = 32, 
+            num_hidden_channels = args.num_hidden_channels, 
+            num_layers = args.num_layers, 
             hidden_channels = None, 
             dropout = 0.5,
             sigmoid_bias = sigmoid_bias,
@@ -92,7 +92,7 @@ def main():
     parser = argparse.ArgumentParser(description='execute optuna studying')
     parser.add_argument('--dataset', type=str, default='Cora')
     parser.add_argument('--encode_model', type=str, default='GCNII')
-    parser.add_argument('--decode_model', type=str, default='GAE')
+    parser.add_argument('--decode_model', type=str, default='Shifted-GAE')
     parser.add_argument('--activation', type=str, default='relu')
     parser.add_argument('--num_layers', type=int, default=32)
     parser.add_argument('--num_hidden_channels', type=int, default=32)
@@ -124,6 +124,7 @@ def main():
     parser.add_argument('--gcnii_theta_max', type=float, default=1.5)
     parser.add_argument('--save_study', type=int, default=1)
     parser.add_argument('--read_strage_only', type=int, default=0)
+    parser.add_argument('--load_if_exists', type=int, default=1)
 
     args = parser.parse_args()
 
@@ -137,7 +138,7 @@ def main():
         study = optuna.create_study(
             study_name=study_name,
             storage='sqlite:///optuna_study.db',
-            load_if_exists=True
+            load_if_exists=True if args.load_if_exists==1 else False
         )
     else:
         study = optuna.create_study()
