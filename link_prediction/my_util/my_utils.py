@@ -66,6 +66,7 @@ def data_downloader(dataset = 'Cora', data_dir='../data'):
         # df = df.dropna(thresh=100, axis=1) # NaNでないデータがthresh個以上なら削除しない
         df = df.fillna(0) # その他の列は平均で補完
         df = (df - df.mean()) / df.std()
+        df = df.dropna(how='any', axis=1)
         num_features = len(df.columns)
 
         # X to tensor
