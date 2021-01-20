@@ -492,7 +492,6 @@ class Link_Prediction_Model():
             else:
                 z = self.decode_model.encode(self.data.x)
 
-            print(z)
             link_probs = self.decode_model.decode(z, decode_node_pairs = edge_index)
             if torch.isnan(link_probs).sum()>0:
                 print('np.nan occurred')

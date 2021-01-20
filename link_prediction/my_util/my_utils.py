@@ -63,7 +63,7 @@ def data_downloader(dataset = 'Cora', data_dir='../data'):
 
         # 欠損値の処理
         df = df.iloc[:, 5:] # sec_codeは除く
-        df = df.dropna(thresh=100, axis=1) # NaNでないデータがthresh個以上なら削除しない
+        # df = df.dropna(thresh=100, axis=1) # NaNでないデータがthresh個以上なら削除しない
         df = df.fillna(df.mean()) # その他の列は平均で補完
         df = (df - df.mean()) / df.std()
         num_features = len(df.columns)
