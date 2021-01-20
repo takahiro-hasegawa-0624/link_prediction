@@ -58,7 +58,8 @@ def data_downloader(dataset = 'Cora', data_dir='../data'):
         for row in df.itertuples(): dic[row[1]] = row[0]
 
         edge = pd.read_csv(data_dir + f'/Factset/edges_{year}.csv', usecols=['SOURCE_COMPANY_TICKER','TARGET_COMPANY_TICKER']).rename(columns={'SOURCE_COMPANY_TICKER': 'source', 'TARGET_COMPANY_TICKER': 'target'})
-        edge = edge.applymap(lambda x: dic[x])
+        edge = edge.applymap(lambda x: dic[x] if x in dic.keys() else np.nan)
+        edge = edge.dropna(how='any').reset_index(drop=True)
 
         # 欠損値の処理
         df = df.iloc[:, 5:] # sec_codeは除く
@@ -74,9 +75,9 @@ def data_downloader(dataset = 'Cora', data_dir='../data'):
 
         # edge_index to tensor
         edge_index = [[], []]
-        for row in pd.read_csv(data_dir + '/factset/processed_data/edge.csv', index_col=0).itertuples():
-            edge_index[0].append(dic[row[0]]) # 始点
-            edge_index[1].append(dic[row[1]]) # 終点
+        for row in range(edge.shape[0]):
+            edge_index[0].append(edge.loc[row,'source']) # 始点
+            edge_index[1].append(edge.loc[row,'target']) # 終点
         edge_index = torch.tensor(edge_index, dtype=torch.long)
 
         # torch_geometric.data.Data 
