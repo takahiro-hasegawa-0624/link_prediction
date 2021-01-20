@@ -439,7 +439,7 @@ class Link_Prediction_Model():
             link_probs = self.decode_model.decode(z)
             if torch.isnan(link_probs).sum()>0:
                 print('np.nan occurred')
-                link_probs[torch.isnan(link_probs)]=1.0
+                link_probs[torch.isnan(link_probs)]=0.5
 
             loss = F.binary_cross_entropy(link_probs, self.y_train, weight = self.mask)
             if self.decode_modelname in ['VGAE', 'Shifted-VGAE']:
@@ -495,7 +495,7 @@ class Link_Prediction_Model():
             link_probs = self.decode_model.decode(z, decode_node_pairs = edge_index)
             if torch.isnan(link_probs).sum()>0:
                 print('np.nan occurred')
-                link_probs[torch.isnan(link_probs)]=1.0
+                link_probs[torch.isnan(link_probs)]=0.5
 
             link_labels = my_utils.get_link_labels(self.data.train_pos_edge_index, neg_edge_index).to(self.device)
             weight = my_utils.get_loss_weight(self.data.train_pos_edge_index, neg_edge_index, self.negative_sampling_ratio).to(self.device)
@@ -552,7 +552,7 @@ class Link_Prediction_Model():
         
         if torch.isnan(link_probs).sum()>0:
             print('np.nan occurred')
-            link_probs[torch.isnan(link_probs)]=1.0
+            link_probs[torch.isnan(link_probs)]=0.5
         link_labels = my_utils.get_link_labels(pos_edge_index, neg_edge_index).to(self.device)
 
         if (self.decode_modelname == 'Cat_Linear_Decoder'):
@@ -589,7 +589,7 @@ class Link_Prediction_Model():
 
         if torch.isnan(link_probs).sum()>0:
             print('np.nan occurred')
-            link_probs[torch.isnan(link_probs)]=1.0
+            link_probs[torch.isnan(link_probs)]=0.5
         link_labels = my_utils.get_link_labels(pos_edge_index, neg_edge_index).to(self.device)
 
         if (self.decode_modelname == 'Cat_Linear_Decoder'):
