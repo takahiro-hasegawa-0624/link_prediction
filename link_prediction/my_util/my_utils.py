@@ -57,8 +57,9 @@ def data_downloader(dataset = 'Cora', data_dir='../data'):
         dic = {}
         for row in df.itertuples(): dic[row[1]] = row[0]
 
-        edge = pd.read_csv(data_dir + f'/Factset/edges_{year}.csv', usecols=['SOURCE_COMPANY_TICKER','TARGET_COMPANY_TICKER']).rename(columns={'SOURCE_COMPANY_TICKER': 'source', 'TARGET_COMPANY_TICKER': 'target'})
+        edge = pd.read_csv(data_dir + f'/Factset/edges_{year}.csv', usecols=['REL_TYPE','SOURCE_COMPANY_TICKER','TARGET_COMPANY_TICKER']).rename(columns={'SOURCE_COMPANY_TICKER': 'source', 'TARGET_COMPANY_TICKER': 'target'})
         edge = edge[(edge['REL_TYPE']=='CUSTOMER') | (edge['REL_TYPE']=='SUPPLIER')]
+        edge = edge[['source','target']]
         edge = edge.applymap(lambda x: dic[x] if x in dic.keys() else np.nan)
         edge = edge.dropna(how='any').reset_index(drop=True)
 
