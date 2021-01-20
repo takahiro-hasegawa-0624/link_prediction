@@ -47,19 +47,20 @@ def data_downloader(dataset = 'Cora', data_dir='../data'):
     if dataset in ['Cora', 'CiteSeer', 'PubMed']:
         data = Planetoid(data_dir, dataset, transform=T.NormalizeFeatures())[0]
 
-    elif dataset == 'Factset':
-        df = pd.read_csv(data_dir + '/factset/processed_data/feature.csv')
+    elif 'Factset' in dataset:
+        year = dataset[-4:]
+        df = pd.read_csv(data_dir + f'/Factset/node_features_{year}_processed.csv')
         N = len(df) # ノード数
 
         # sec_codeとノード番号の対応付け
         dic = {}
         for row in df.itertuples(): dic[row[1]] = row[0]
 
-        edge = pd.read_csv(data_dir + '/factset/processed_data/edge.csv', usecols=[0,1]).rename(columns={'SUPPLIER_ID': 'source', 'CUSTOMER_ID': 'target'})
+        edge = pd.read_csv(data_dir + f'/Factset/edges_{year}.csv', usecols=['SOURCE_COMPANY_TICKER','TARGET_COMPANY_TICKER']).rename(columns={'SOURCE_COMPANY_TICKER': 'source', 'TARGET_COMPANY_TICKER': 'target'})
         edge = edge.applymap(lambda x: dic[x])
 
         # 欠損値の処理
-        df = df.iloc[:, 1:] # sec_codeは除く
+        df = df.iloc[:, 5:] # sec_codeは除く
         df = df.dropna(thresh=100, axis=1) # NaNでないデータがthresh個以上なら削除しない
         df = df.fillna(df.mean()) # その他の列は平均で補完
         df = (df - df.mean()) / df.std()
