@@ -49,6 +49,7 @@ def data_downloader(dataset = 'Cora', data_dir='../data'):
 
     elif 'Factset' in dataset:
         year = dataset[-4:]
+        print(f'pricessing Factset in year {year}.')
         df = pd.read_csv(data_dir + f'/Factset/node_features_{year}_processed.csv')
         N = len(df) # ノード数
 
