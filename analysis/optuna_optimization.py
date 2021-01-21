@@ -121,7 +121,7 @@ def main():
     parser.add_argument('--gcnii_alpha_min', type=float, default=0.05)
     parser.add_argument('--gcnii_alpha_max', type=float, default=0.5)
     parser.add_argument('--gcnii_theta_min', type=float, default=0.05)
-    parser.add_argument('--gcnii_theta_max', type=float, default=1.5)
+    parser.add_argument('--gcnii_theta_max', type=float, default=1.0)
     parser.add_argument('--save_study', type=int, default=1)
     parser.add_argument('--read_strage_only', type=int, default=0)
 
