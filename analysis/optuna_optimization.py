@@ -21,7 +21,7 @@ def get_optimizer(trial, model, args):
         # weight_decay_bias = trial.suggest_loguniform('weight_decay_bias', args.weight_decay_bias_min, args.weight_decay_bias_max)
         # lr_bias = trial.suggest_uniform('lr_bias', args.lr_bias_min, args.lr_bias_max)
         # optimizer['decoder_bias'] = torch.optim.Adam(model.decode_model.bias.parameters(), weight_decay=weight_decay_bias, lr=lr_bias)
-        optimizer['decoder_lins'] = torch.optim.Adam(model.decode_model.lins.parameters(), weight_decay=1e-2, lr=0.05)
+        optimizer['decoder_bias'] = torch.optim.Adam(model.decode_model.bias.parameters(), weight_decay=1e-2, lr=0.05)
 
 
     if args.decode_model == 'Cat_Linear_Decoder':
