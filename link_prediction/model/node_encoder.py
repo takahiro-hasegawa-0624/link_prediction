@@ -294,7 +294,7 @@ class GCNII(torch.nn.Module):
         self.lins.append(GCNConv(data.x.size(1), num_hidden_channels))
 
         self.convs = torch.nn.ModuleList()
-        for layer in range(num_layers):
+        for layer in range(num_layers - 1):
             self.convs.append(GCN2Conv(num_hidden_channels, alpha, theta, layer+1, shared_weights = shared_weights, normalize = False))
 
         if self.decode_modelname in ['VGAE', 'Shifted-VGAE']:
@@ -303,7 +303,7 @@ class GCNII(torch.nn.Module):
             self.convs.append(GCNConv(num_hidden_channels, 1))
 
         self.batchnorms = torch.nn.ModuleList()
-        for layer in range(num_layers - 1):
+        for layer in range(num_layers - 2):
             self.batchnorms.append(torch.nn.BatchNorm1d(num_hidden_channels))
 
         self.activation = activation

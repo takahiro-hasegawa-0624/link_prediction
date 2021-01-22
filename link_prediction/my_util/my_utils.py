@@ -33,7 +33,7 @@ random.seed(seed)
 torch.manual_seed(seed)
 torch.cuda.manual_seed(seed)
 
-def data_downloader(dataset = 'Cora', data_dir='../data'):
+def data_downloader(dataset = 'Cora', data_dir='../data', data_type='static'):
     '''
     グラフデータをダウンロードする.
 
@@ -49,8 +49,11 @@ def data_downloader(dataset = 'Cora', data_dir='../data'):
 
     elif 'Factset' in dataset:
         year = dataset[-4:]
-        print(f'pricessing Factset in year {year}.')
-        df = pd.read_csv(data_dir + f'/Factset/node_features_{year}_processed.csv')
+        print(f'processing Factset in year {year}.')
+        if data_type == 'dynamic':
+            df = pd.read_csv(data_dir + f'/Factset/node_features_{year}_dynamic_processed.csv').drop_duplicates(ignore_index=True, subset='code')
+        else:
+            df = pd.read_csv(data_dir + f'/Factset/node_features_{year}_processed.csv').drop_duplicates(ignore_index=True, subset='code')
         N = len(df) # ノード数
 
         # sec_codeとノード番号の対応付け
@@ -68,7 +71,7 @@ def data_downloader(dataset = 'Cora', data_dir='../data'):
         # df = df.dropna(thresh=100, axis=1) # NaNでないデータがthresh個以上なら削除しない
         df = df.fillna(0) # その他の列は平均で補完
         df = (df - df.mean()) / df.std()
-        df = df.dropna(how='any', axis=1)
+        df = df.fillna(0)
         num_features = len(df.columns)
 
         # X to tensor
@@ -94,7 +97,7 @@ def data_downloader(dataset = 'Cora', data_dir='../data'):
 
     return data
 
-def data_processor(data, undirected=True):
+def data_processor(data, undirected=True, val_ratio=0.05, test_ratio=0.1):
     '''
     グラフデータをPytorch Geometric用に処理する.
 
@@ -118,7 +121,7 @@ def data_processor(data, undirected=True):
     all_pos_edge_index = data.edge_index
 
     data.train_mask = data.val_mask = data.test_mask = data.y = None
-    data = train_test_split_edges(data, val_ratio=0.05, test_ratio=0.1)
+    data = train_test_split_edges(data, val_ratio=val_ratio, test_ratio=test_ratio)
 
     print('train test split has been done.')
     print(data)
