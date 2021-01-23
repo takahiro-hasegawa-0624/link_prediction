@@ -785,9 +785,9 @@ class Link_Prediction_Model():
         ax.plot(np.arange(1, self.num_epochs+1), self.val_loss_list, label='validation')
         ax.plot(np.arange(1, self.num_epochs+1), self.test_loss_list, label='test')
         ax.legend()
-        ax.set_xlabel('epoch')
-        ax.set_ylabel('binary cross entropy')
-        ax.set_title(f"{self.decode_modelname}, enc: {self.encode_modelname}, layers: {self.num_layers}, hidden: {self.num_hidden_channels}")
+        ax.set_xlabel('Epoch')
+        ax.set_ylabel('Binary cross entropy')
+        ax.set_title(f"{self.decode_modelname}, enc: {self.encode_modelname}, layers: {self.num_layers}")
         ax.grid()
         if save:
             fig.savefig(path+'/loss.png')
@@ -803,9 +803,9 @@ class Link_Prediction_Model():
         ax.plot(np.arange(1, self.num_epochs+1), self.val_auc_list, label='validation')
         ax.plot(np.arange(1, self.num_epochs+1), self.test_auc_list, label='test')
         ax.legend()
-        ax.set_xlabel('epoch')
+        ax.set_xlabel('Epoch')
         ax.set_ylabel('AUC')
-        ax.set_title(f"{self.decode_modelname}, enc: {self.encode_modelname}, layers: {self.num_layers}, hidden: {self.num_hidden_channels}")
+        ax.set_title(f"{self.decode_modelname}, enc: {self.encode_modelname}, layers: {self.num_layers}")
         ax.grid()
         if save:
             fig.savefig(path+'/auc.png')
@@ -821,9 +821,9 @@ class Link_Prediction_Model():
         ax.plot(np.arange(1, self.num_epochs+1), self.val_precision_list, label='validation')
         ax.plot(np.arange(1, self.num_epochs+1), self.test_precision_list, label='test')
         ax.legend()
-        ax.set_xlabel('epoch')
-        ax.set_ylabel('precision')
-        ax.set_title(f"{self.decode_modelname}, enc: {self.encode_modelname}, layers: {self.num_layers}, hidden: {self.num_hidden_channels}")
+        ax.set_xlabel('Epoch')
+        ax.set_ylabel('Precision')
+        ax.set_title(f"{self.decode_modelname}, enc: {self.encode_modelname}, layers: {self.num_layers}")
         ax.grid()
         if save:
             fig.savefig(path+'/precision.png')
@@ -839,7 +839,7 @@ class Link_Prediction_Model():
         ax.legend()
         ax.set_xlabel('FPR: False positive rate')
         ax.set_ylabel('TPR: True positive rate')
-        ax.set_title(f"{self.decode_modelname}, enc: {self.encode_modelname}, layers: {self.num_layers}, hidden: {self.num_hidden_channels}")
+        ax.set_title(f"{self.decode_modelname}, enc: {self.encode_modelname}, layers: {self.num_layers}")
         ax.grid()
         if save:
             fig.savefig(path+'/roc.png')
@@ -853,9 +853,9 @@ class Link_Prediction_Model():
             fig, ax = plt.subplots(figsize=(size, size*9/16), dpi=150)
             ax.axvline(x=epochs, c='crimson')
             ax.plot(np.arange(1, self.num_epochs+1), self.sigmoid_bias_list)
-            ax.set_xlabel('epoch')
-            ax.set_ylabel('sigmoid bias')
-            ax.set_title(f"{self.decode_modelname}, enc: {self.encode_modelname}, layers: {self.num_layers}, hidden: {self.num_hidden_channels}")
+            ax.set_xlabel('Epoch')
+            ax.set_ylabel('Sigmoid bias')
+            ax.set_title(f"{self.decode_modelname}, enc: {self.encode_modelname}, layers: {self.num_layers}")
             ax.grid()
             if save:
                 fig.savefig(path+'/sigmoid_bias.png')
@@ -870,8 +870,8 @@ class Link_Prediction_Model():
         inner_product_flatten = inner_product_flatten[~np.isinf(inner_product_flatten)]
         ax.hist(inner_product.flatten(), bins=100)
         ax.set_xlim(-1, 1)
-        ax.set_xlabel('cosine similarity of the feature vectors')
-        ax.set_title(f"{self.decode_modelname}, enc: {self.encode_modelname}, layers: {self.num_layers}, hidden: {self.num_hidden_channels}")
+        ax.set_xlabel('Cosine similarity of the feature vectors')
+        ax.set_title(f"{self.decode_modelname}, enc: {self.encode_modelname}, layers: {self.num_layers}")
         ax.grid(axis='x')
         ax.axes.yaxis.set_visible(False)
         if save:
@@ -902,7 +902,7 @@ class Link_Prediction_Model():
         z_norm_flatten = z_norm_flatten[~np.isinf(z_norm_flatten)]
         ax.hist(z_norm_flatten, bins=100)
         # ax.set_xscale('log')
-        ax.set_xlabel('norms of the feature vectors')
+        ax.set_xlabel('Norm of the feature vectors')
         ax.set_title(f"{self.decode_modelname}, enc: {self.encode_modelname}, layers: {self.num_layers}, hidden: {self.num_hidden_channels}")
         ax.grid(axis='x')
         if save:
