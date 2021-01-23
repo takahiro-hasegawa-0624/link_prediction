@@ -806,8 +806,6 @@ class Link_Prediction_Model():
         ax.set_xlabel('Epoch')
         ax.set_ylabel('AUC')
         ax.set_title(f"{self.decode_modelname}, enc: {self.encode_modelname}, layers: {self.num_layers}")
-        ax.set_yticks(0.1)
-        ax.set_yticks(0.05,minor=True)
         ax.grid()
         if save:
             fig.savefig(path+'/auc.png')
@@ -826,8 +824,6 @@ class Link_Prediction_Model():
         ax.set_xlabel('Epoch')
         ax.set_ylabel('Precision')
         ax.set_title(f"{self.decode_modelname}, enc: {self.encode_modelname}, layers: {self.num_layers}")
-        ax.set_yticks(0.1)
-        ax.set_yticks(0.05,minor=True)
         ax.grid()
         if save:
             fig.savefig(path+'/precision.png')
@@ -860,8 +856,6 @@ class Link_Prediction_Model():
             ax.set_xlabel('Epoch')
             ax.set_ylabel('Sigmoid bias')
             ax.set_title(f"{self.decode_modelname}, enc: {self.encode_modelname}, layers: {self.num_layers}")
-            ax.set_yticks(1)
-            ax.set_yticks(0.5,minor=True)
             ax.grid()
             if save:
                 fig.savefig(path+'/sigmoid_bias.png')
