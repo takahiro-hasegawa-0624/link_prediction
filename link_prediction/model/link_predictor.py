@@ -704,7 +704,7 @@ class Link_Prediction_Model():
             self.best_decode_model = cloudpickle.load(f)
 
     @torch.no_grad()
-    def model_evaluate(self, validation=False, save=True, fig_show=True):
+    def model_evaluate(self, validation=False, save=True, fig_show=True, fig_size=4):
         '''
         学習済みモデルを評価する
         ROC曲線・AUC score・特徴量のcos類似度・特徴量のノルム・混同行列を計算する
@@ -773,7 +773,7 @@ class Link_Prediction_Model():
         test_auc = roc_auc_score(test_link_labels, test_link_probs)
 
         # plot size indicator
-        size=4
+        size=fig_size
 
         parameters = {'axes.titlesize': 10}
         plt.rcParams.update(parameters)
