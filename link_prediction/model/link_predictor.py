@@ -903,7 +903,7 @@ class Link_Prediction_Model():
         ax.hist(z_norm_flatten, bins=100)
         # ax.set_xscale('log')
         ax.set_xlabel('Norm of the feature vectors')
-        ax.set_title(f"{self.decode_modelname}, enc: {self.encode_modelname}, layers: {self.num_layers}, hidden: {self.num_hidden_channels}")
+        ax.set_title(f"{self.decode_modelname}, enc: {self.encode_modelname}, layers: {self.num_layers}")
         ax.grid(axis='x')
         if save:
             fig.savefig(path+'/norm.png')
