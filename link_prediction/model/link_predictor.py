@@ -704,7 +704,7 @@ class Link_Prediction_Model():
             self.best_decode_model = cloudpickle.load(f)
 
     @torch.no_grad()
-    def model_evaluate(self, validation=False, save=True):
+    def model_evaluate(self, validation=False, save=True, fig_show=True):
         '''
         学習済みモデルを評価する
         ROC曲線・AUC score・特徴量のcos類似度・特徴量のノルム・混同行列を計算する
@@ -791,7 +791,7 @@ class Link_Prediction_Model():
         ax.grid()
         if save:
             fig.savefig(path+'/loss.png')
-        if 'ipykernel' in sys.modules:
+        if ('ipykernel' in sys.modules) and (fig_show is True):
             plt.show()
         else:
             plt.close()
@@ -809,7 +809,7 @@ class Link_Prediction_Model():
         ax.grid()
         if save:
             fig.savefig(path+'/auc.png')
-        if 'ipykernel' in sys.modules:
+        if ('ipykernel' in sys.modules) and (fig_show is True):
             plt.show()
         else:
             plt.close()
@@ -827,7 +827,7 @@ class Link_Prediction_Model():
         ax.grid()
         if save:
             fig.savefig(path+'/precision.png')
-        if 'ipykernel' in sys.modules:
+        if ('ipykernel' in sys.modules) and (fig_show is True):
             plt.show()
         else:
             plt.close()
@@ -843,7 +843,7 @@ class Link_Prediction_Model():
         ax.grid()
         if save:
             fig.savefig(path+'/roc.png')
-        if 'ipykernel' in sys.modules:
+        if ('ipykernel' in sys.modules) and (fig_show is True):
             plt.show()
         else:
             plt.close()
@@ -859,7 +859,7 @@ class Link_Prediction_Model():
             ax.grid()
             if save:
                 fig.savefig(path+'/sigmoid_bias.png')
-        if 'ipykernel' in sys.modules:
+        if ('ipykernel' in sys.modules) and (fig_show is True):
             plt.show()
         else:
             plt.close()
@@ -876,7 +876,7 @@ class Link_Prediction_Model():
         ax.axes.yaxis.set_visible(False)
         if save:
             fig.savefig(path+'/cos_similarity.png')
-        if 'ipykernel' in sys.modules:
+        if ('ipykernel' in sys.modules) and (fig_show is True):
             plt.show()
         else:
             plt.close()
@@ -891,7 +891,7 @@ class Link_Prediction_Model():
         # ax.grid()
         # if save:
         #     fig.savefig(path+'/average_norm.png')
-        # if 'ipykernel' in sys.modules:
+        # if ('ipykernel' in sys.modules) and (fig_show is True):
         #     plt.show()
         # else:
         #     plt.close()
@@ -907,7 +907,7 @@ class Link_Prediction_Model():
         ax.grid(axis='x')
         if save:
             fig.savefig(path+'/norm.png')
-        if 'ipykernel' in sys.modules:
+        if ('ipykernel' in sys.modules) and (fig_show is True):
             plt.show()
         else:
             plt.close()
@@ -925,7 +925,7 @@ class Link_Prediction_Model():
         # ax.set_title(f"{self.decode_modelname}, enc: {self.encode_modelname}, layers: {self.num_layers}, hidden: {self.num_hidden_channels}")
         # if save:
         #     fig.savefig(path+'/t-sne.png')
-        # if 'ipykernel' in sys.modules:
+        # if ('ipykernel' in sys.modules) and (fig_show is True):
         #     plt.show()
         # else:
         #     plt.close()
