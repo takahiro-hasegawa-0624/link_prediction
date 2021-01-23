@@ -461,7 +461,8 @@ class Link_Prediction_Model():
                 optimizer.zero_grad()
 
             neg_edge_index = negative_sampling(
-                edge_index = self.edge_index_for_negative_sampling,
+                # edge_index = self.edge_index_for_negative_sampling,
+                edge_index = self.data.train_pos_edge_index,
                 num_nodes = self.data.num_nodes,
                 num_neg_samples = self.num_negative_samples
             )
