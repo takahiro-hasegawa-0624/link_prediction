@@ -790,7 +790,7 @@ class Link_Prediction_Model():
         ax.set_title(f"{self.decode_modelname}, enc: {self.encode_modelname}, layers: {self.num_layers}")
         ax.grid()
         if save:
-            fig.savefig(path+'/loss.png')
+            fig.savefig(path+'/loss.png', bbox_inches='tight')
         if ('ipykernel' in sys.modules) and (fig_show is True):
             plt.show()
         else:
@@ -808,7 +808,7 @@ class Link_Prediction_Model():
         ax.set_title(f"{self.decode_modelname}, enc: {self.encode_modelname}, layers: {self.num_layers}")
         ax.grid()
         if save:
-            fig.savefig(path+'/auc.png')
+            fig.savefig(path+'/auc.png', bbox_inches='tight')
         if ('ipykernel' in sys.modules) and (fig_show is True):
             plt.show()
         else:
@@ -826,7 +826,7 @@ class Link_Prediction_Model():
         ax.set_title(f"{self.decode_modelname}, enc: {self.encode_modelname}, layers: {self.num_layers}")
         ax.grid()
         if save:
-            fig.savefig(path+'/precision.png')
+            fig.savefig(path+'/precision.png', bbox_inches='tight')
         if ('ipykernel' in sys.modules) and (fig_show is True):
             plt.show()
         else:
@@ -842,7 +842,7 @@ class Link_Prediction_Model():
         ax.set_title(f"{self.decode_modelname}, enc: {self.encode_modelname}, layers: {self.num_layers}")
         ax.grid()
         if save:
-            fig.savefig(path+'/roc.png')
+            fig.savefig(path+'/roc.png', bbox_inches='tight')
         if ('ipykernel' in sys.modules) and (fig_show is True):
             plt.show()
         else:
@@ -858,7 +858,7 @@ class Link_Prediction_Model():
             ax.set_title(f"{self.decode_modelname}, enc: {self.encode_modelname}, layers: {self.num_layers}")
             ax.grid()
             if save:
-                fig.savefig(path+'/sigmoid_bias.png')
+                fig.savefig(path+'/sigmoid_bias.png', bbox_inches='tight')
         if ('ipykernel' in sys.modules) and (fig_show is True):
             plt.show()
         else:
@@ -875,7 +875,7 @@ class Link_Prediction_Model():
         ax.grid(axis='x')
         ax.axes.yaxis.set_visible(False)
         if save:
-            fig.savefig(path+'/cos_similarity.png')
+            fig.savefig(path+'/cos_similarity.png', bbox_inches='tight')
         if ('ipykernel' in sys.modules) and (fig_show is True):
             plt.show()
         else:
@@ -906,7 +906,7 @@ class Link_Prediction_Model():
         ax.set_title(f"{self.decode_modelname}, enc: {self.encode_modelname}, layers: {self.num_layers}")
         ax.grid(axis='x')
         if save:
-            fig.savefig(path+'/norm.png')
+            fig.savefig(path+'/norm.png', bbox_inches='tight')
         if ('ipykernel' in sys.modules) and (fig_show is True):
             plt.show()
         else:
