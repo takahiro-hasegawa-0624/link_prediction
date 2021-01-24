@@ -326,6 +326,9 @@ class GCNII(torch.nn.Module):
 
         x_0 = z
 
+        if self.num_layers==2:
+            z = z.relu()
+
         if self.decode_modelname in ['VGAE', 'Shifted-VGAE', 'S_VAE']:
             for i, conv in enumerate(self.convs[:-2]):
                 z = F.dropout(z, self.dropout, training = self.training)
