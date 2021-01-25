@@ -327,7 +327,7 @@ class GCNII(torch.nn.Module):
         if self.num_layers==2:
             z = z.relu()
 
-        x_0 = z.detach().clone()
+        x_0 = z
 
 
         if self.decode_modelname in ['VGAE', 'Shifted-VGAE', 'S_VAE']:
