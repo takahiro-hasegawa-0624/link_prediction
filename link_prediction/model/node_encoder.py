@@ -323,12 +323,11 @@ class GCNII(torch.nn.Module):
 
         # 線形変換で次元削減して入力とする
         z = self.lins[0](x, edge_index)
+        
+        x_0 = z
 
         if self.num_layers==2:
             z = z.relu()
-
-        x_0 = z
-
 
         if self.decode_modelname in ['VGAE', 'Shifted-VGAE', 'S_VAE']:
             for i, conv in enumerate(self.convs[:-2]):
