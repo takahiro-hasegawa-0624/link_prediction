@@ -66,6 +66,12 @@ def data_downloader(dataset = 'Cora', data_dir='../data', data_type='static'):
         edge = edge[(edge['REL_TYPE']=='CUSTOMER') | (edge['REL_TYPE']=='SUPPLIER')]
         edge = edge[['source','target']].drop_duplicates(ignore_index=True, subset=['source', 'target'])
 
+        for i in range(edge.shape[0]):
+        if i in edge.index:
+            source = edge.loc[i,'source']
+            target = edge.loc[i,'target']
+            edge = edge.drop(edge[(edge['source']==target) & (edge['target']==source)].index)
+
         edge = edge.applymap(lambda x: dic[x] if x in dic.keys() else np.nan)
         edge = edge.dropna(how='any').reset_index(drop=True)
 
@@ -82,11 +88,7 @@ def data_downloader(dataset = 'Cora', data_dir='../data', data_type='static'):
         X = torch.tensor(X, dtype=torch.float)
 
         # edge_index to tensor
-        edge_index = [[], []]
-        for row in range(edge.shape[0]):
-            edge_index[0].append(edge.loc[row,'source']) # 始点
-            edge_index[1].append(edge.loc[row,'target']) # 終点
-        edge_index = torch.tensor(edge_index, dtype=torch.long)
+        edge_index = torch.tensor(edge.to_numpy().T, dtype=torch.long)
 
         # torch_geometric.data.Data 
         data = Data(x=X, edge_index=edge_index)
