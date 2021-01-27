@@ -47,8 +47,6 @@ def data_downloader(dataset = 'Cora', data_dir='../data', data_type='static'):
     if dataset in ['Cora', 'CiteSeer', 'PubMed']:
         data = Planetoid(data_dir, dataset, transform=T.NormalizeFeatures())[0]
 
-        data.edge_index = torch.LongTensor(df_edge_index.to_numpy().T)
-
     elif 'Factset' in dataset:
         year = dataset[-4:]
         print(f'processing Factset in year {year}.')
