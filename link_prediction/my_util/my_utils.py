@@ -47,6 +47,16 @@ def data_downloader(dataset = 'Cora', data_dir='../data', data_type='static'):
     if dataset in ['Cora', 'CiteSeer', 'PubMed']:
         data = Planetoid(data_dir, dataset, transform=T.NormalizeFeatures())[0]
 
+        df_edge_index = pd.DataFrame(data.edge_index.t().numpy(), columns=['source', 'target'])
+
+        for i in range(df_edge_index.shape[0]):
+        if i in df_edge_index.index:
+            source = df_edge_index.loc[i,'source']
+            target = df_edge_index.loc[i,'target']
+            df_edge_index = df_edge_index.drop(df_edge_index[(df_edge_index['source']==target) & (df_edge_index['target']==source)].index)
+
+        data.edge_index = torch.LongTensor(df_edge_index.to_numpy().T)
+
     elif 'Factset' in dataset:
         year = dataset[-4:]
         print(f'processing Factset in year {year}.')
@@ -62,7 +72,14 @@ def data_downloader(dataset = 'Cora', data_dir='../data', data_type='static'):
 
         edge = pd.read_csv(data_dir + f'/Factset/edges_{year}.csv', usecols=['REL_TYPE','SOURCE_COMPANY_TICKER','TARGET_COMPANY_TICKER']).rename(columns={'SOURCE_COMPANY_TICKER': 'source', 'TARGET_COMPANY_TICKER': 'target'})
         edge = edge[(edge['REL_TYPE']=='CUSTOMER') | (edge['REL_TYPE']=='SUPPLIER')]
-        edge = edge[['source','target']]
+        edge = edge[['source','target']].drop_duplicates(ignore_index=True, subset=['source', 'target'])
+
+        for i in range(edge.shape[0]):
+        if i in edge.index:
+            source = edge.loc[i,'source']
+            target = edge.loc[i,'target']
+            edge = edge.drop(edge[(edge['source']==target) & (edge['target']==source)].index)
+
         edge = edge.applymap(lambda x: dic[x] if x in dic.keys() else np.nan)
         edge = edge.dropna(how='any').reset_index(drop=True)
 
@@ -72,7 +89,6 @@ def data_downloader(dataset = 'Cora', data_dir='../data', data_type='static'):
         df = df.fillna(0) # その他の列は平均で補完
         df = (df - df.mean()) / df.std()
         df = df.fillna(0)
-        num_features = len(df.columns)
 
         # X to tensor
         X = [[] for _ in range(N)]
