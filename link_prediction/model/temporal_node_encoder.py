@@ -116,7 +116,6 @@ class GCRN(torch.nn.Module):
             z = x
             for i in range(self.num_layers):
                 idx = t*self.num_layers + i
-                print(idx, z.size())
 
                 z = F.dropout(z, self.dropout, training = self.training)
 
