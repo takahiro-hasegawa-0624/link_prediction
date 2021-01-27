@@ -130,7 +130,7 @@ class GCRN(torch.nn.Module):
                     elif self.activation == "tanh":
                         z = torch.tanh(z)
 
-                z_seq.append(z)
+            z_seq.append(z)
 
         z_seq_tensor = torch.stack(z_seq,0)
         z_seq_tensor , (h_, c_) = self.recurrents[0](z_seq_tensor)
