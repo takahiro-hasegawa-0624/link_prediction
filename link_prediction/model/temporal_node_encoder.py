@@ -108,7 +108,7 @@ class GCRN(torch.nn.Module):
         '''
                 
         z_seq = []
-        hx_list = [None]*(x_seq.size(0)+1)
+        hx_list = [None]*(len(x_seq)+1)
         for t, x in enumerate(x_seq):
             if (self.future_prediction is True) and (t == x_seq.size(0) - 1):
                 break
