@@ -127,11 +127,6 @@ def data_processor(data, undirected=True, val_ratio=0.05, test_ratio=0.1):
         y_train (numpy.ndarray[num_nodes, num_nodes].flatten()): trainデータのリンクの隣接行列をflattenしたもの.
         mask (numpy.ndarray[num_nodes, num_nodes].flatten()): validation, testのpos_edge, neg_edgeとしてサンプリングしたリンクをFalse、それ以外をTrueとした隣接行列をflattenしたもの.
     '''
-    
-    # 有向グラフを無向グラフ化
-    if undirected is True:
-        data.edge_index = to_undirected(data.edge_index)
-        print('transformd the graph to undirected.\n')
 
     # train_test_splitをする前に、エッジのTensorをコピーしておく
     all_pos_edge_index = data.edge_index
