@@ -55,7 +55,7 @@ class GCRN(torch.nn.Module):
             self.num_layers = num_layers
 
             for _ in range(len(data_list)):
-                self.convs.append(GCNConv(data.x.size(1), num_hidden_channels))
+                self.convs.append(GCNConv(data_list[-1].x.size(1), num_hidden_channels))
                 for _ in range(num_layers - 1):
                     self.convs.append(GCNConv(num_hidden_channels, num_hidden_channels))
 
@@ -79,7 +79,7 @@ class GCRN(torch.nn.Module):
             self.num_layers = len(hidden_channels)
 
             for _ in range(len(data_list)):
-                self.convs.append(GCNConv(data.x.size(1), hidden_channels[0]))
+                self.convs.append(GCNConv(data_list[-1].x.size(1), hidden_channels[0]))
                 for i in range(len(hidden_channels) - 1):
                     self.convs.append(GCNConv(hidden_channels[i], hidden_channels[i+1]))
 
@@ -126,8 +126,8 @@ class GCRN(torch.nn.Module):
             
             z, (h_, c_) = self.recurrents[0](z[None, :, :], hx_list[t])
             hx = (torch.zeros_like(c_).to(self.device), c_)
-            hx_layers[i+1] = hx
-            conv.weight = torch.nn.Parameter(W.squeeze())
+            hx_list[t+1] = hx
+            z = z.squeeze()
             z_seq.append(z)
 
         if self.future_prediction is True:
@@ -299,7 +299,7 @@ class EvolveGCNO(torch.nn.Module):
 
             self.num_layers = num_layers
             self.convs.append(GCNConv(data_list[-1].x.size(1), num_hidden_channels))
-            self.recurrents.append(LSTM(input_size = data_list[-1].x.size(1), hidden_size = num_hidden_channels))
+            self.recurrents.append(LSTM(input_size = num_hidden_channels, hidden_size = num_hidden_channels))
             for _ in range(num_layers - 1):
                 self.convs.append(GCNConv(num_hidden_channels, num_hidden_channels))
                 self.recurrents.append(LSTM(input_size = num_hidden_channels, hidden_size = num_hidden_channels))
@@ -353,6 +353,7 @@ class EvolveGCNO(torch.nn.Module):
                 z = F.dropout(z, self.dropout, training = self.training)
 
                 W, (h_, c_) = self.recurrents[i](conv.weight[None, :, :], hx_layers[i])
+                print(W.size(), h_.size(), c_.size())
                 hx = (torch.zeros_like(c_).to(self.device), c_)
                 hx_layers[i+1] = hx
                 conv.weight = torch.nn.Parameter(W.squeeze())
