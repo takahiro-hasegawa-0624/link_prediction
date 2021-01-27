@@ -430,7 +430,7 @@ class Temporal_Link_Prediction_Model():
         weight = my_utils.get_loss_weight(self.data_list[-1].train_pos_edge_index, neg_edge_index_seq[-1], self.negative_sampling_ratio).to(self.device)
 
         for t, z in enumerate(z_seq):
-            if t == len(z_seq)-1:
+            if t == len(z_seq)-2:
                 break
 
             link_probs_ = self.decode_model.decode(z, decode_node_pairs = edge_index_seq[t])
