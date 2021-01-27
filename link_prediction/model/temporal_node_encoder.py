@@ -134,7 +134,6 @@ class GCRN(torch.nn.Module):
 
         z_seq_tensor = torch.stack(z_seq,0)
         z_seq_tensor , (h_, c_) = self.recurrents[0](z_seq_tensor)
-        print(h_.size())
 
         for i in range(len(z_seq)):
             z_seq[i] = z_seq_tensor[i]

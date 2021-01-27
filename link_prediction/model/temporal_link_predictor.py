@@ -440,7 +440,6 @@ class Temporal_Link_Prediction_Model():
                 print('np.nan occurred')
                 link_probs[torch.isnan(link_probs)]=0.5
 
-            print(t, self.data_list[t].edge_index, neg_edge_index_seq[t])
             link_labels_ = my_utils.get_link_labels(self.data_list[t].edge_index, neg_edge_index_seq[t]).to(self.device)
             link_labels = torch.cat([link_labels, link_labels_], dim=-1)
             weight_ = my_utils.get_loss_weight(self.data_list[t].edge_index, neg_edge_index_seq[t], self.negative_sampling_ratio).to(self.device)
