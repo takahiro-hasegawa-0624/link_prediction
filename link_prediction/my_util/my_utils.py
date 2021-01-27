@@ -50,10 +50,10 @@ def data_downloader(dataset = 'Cora', data_dir='../data', data_type='static'):
         df_edge_index = pd.DataFrame(data.edge_index.t().numpy(), columns=['source', 'target'])
 
         for i in range(df_edge_index.shape[0]):
-        if i in df_edge_index.index:
-            source = df_edge_index.loc[i,'source']
-            target = df_edge_index.loc[i,'target']
-            df_edge_index = df_edge_index.drop(df_edge_index[(df_edge_index['source']==target) & (df_edge_index['target']==source)].index)
+            if i in df_edge_index.index:
+                source = df_edge_index.loc[i,'source']
+                target = df_edge_index.loc[i,'target']
+                df_edge_index = df_edge_index.drop(df_edge_index[(df_edge_index['source']==target) & (df_edge_index['target']==source)].index)
 
         data.edge_index = torch.LongTensor(df_edge_index.to_numpy().T)
 
@@ -75,10 +75,10 @@ def data_downloader(dataset = 'Cora', data_dir='../data', data_type='static'):
         edge = edge[['source','target']].drop_duplicates(ignore_index=True, subset=['source', 'target'])
 
         for i in range(edge.shape[0]):
-        if i in edge.index:
-            source = edge.loc[i,'source']
-            target = edge.loc[i,'target']
-            edge = edge.drop(edge[(edge['source']==target) & (edge['target']==source)].index)
+            if i in edge.index:
+                source = edge.loc[i,'source']
+                target = edge.loc[i,'target']
+                edge = edge.drop(edge[(edge['source']==target) & (edge['target']==source)].index)
 
         edge = edge.applymap(lambda x: dic[x] if x in dic.keys() else np.nan)
         edge = edge.dropna(how='any').reset_index(drop=True)
