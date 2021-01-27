@@ -912,6 +912,8 @@ class Temporal_Link_Prediction_Model():
                 'lins_lr', 
                 'lins_lr_scheduler', 
                 'lins_lr_scheduler_gamma',
+                'recurrents_weight_decay', 
+                'recurrents_lr', 
                 'num_layers', 
                 'hidden_channels', 
                 'negative_sampling_ratio', 
@@ -981,6 +983,10 @@ class Temporal_Link_Prediction_Model():
                 log_dic['lins_lr_scheduler'] = self.scheduler['encoder_lins'].__class__.__name__
                 log_dic['lins_lr_scheduler_gamma'] = self.scheduler['encoder_lins'].gamma
                 log_dic['lins_lr'] = self.scheduler['encoder_lins'].base_lrs[0]
+
+        if 'encoder_recurrents' in self.optimizer.keys():
+            log_dic['recurrents_weight_decay'] = self.optimizer['encoder_recurrents'].param_groups[0]['weight_decay']
+            log_dic['recurrents_lr'] = self.optimizer['encoder_recurrents'].param_groups[0]['lr']
 
         log_dic['num_layers'] = self.num_layers
         log_dic['hidden_channels'] = self.encode_model.hidden_channels_str

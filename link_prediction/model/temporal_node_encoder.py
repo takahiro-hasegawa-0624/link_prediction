@@ -139,7 +139,6 @@ class GCRN(torch.nn.Module):
 
         if self.future_prediction is True:
             z_seq.append(h_[-1])
-            # z_seq = z_seq[:-1]
 
         return z_seq
 
@@ -160,7 +159,7 @@ class GCRNII(torch.nn.Module):
         train_pos_edge_adj_t (torch.SparseTensor[2, num_pos_edges]): trainデータのリンク.
     '''    
 
-    def __init__(self, data, decode_modelname, train_pos_edge_adj_t, num_hidden_channels, num_layers, alpha=0.1, theta=0.5, shared_weights = True, activation = None, dropout = 0.0):
+    def __init__(self, data, decode_modelname, train_pos_edge_adj_t, num_hidden_channels, num_layers, alpha=0.1, theta=0.5, shared_weights = True, activation = None, dropout = 0.0, future_prediction=True):
         '''
         Args:
             data (torch_geometric.data.Data): グラフデータ.
@@ -186,6 +185,7 @@ class GCRNII(torch.nn.Module):
         self.lins.append(GCNConv(data.x.size(1), num_hidden_channels))
 
         self.convs = torch.nn.ModuleList()
+        self.recurrents = torch.nn.ModuleList()
         for layer in range(num_layers - 1):
             self.convs.append(GCN2Conv(num_hidden_channels, alpha, theta, layer+1, shared_weights = shared_weights, normalize = False))
 
@@ -198,50 +198,42 @@ class GCRNII(torch.nn.Module):
         for layer in range(num_layers - 2):
             self.batchnorms.append(torch.nn.BatchNorm1d(num_hidden_channels))
 
+        self.recurrents.append(LSTM(input_size = hidden_channels[-1], hidden_size = hidden_channels[-1]))
+
         self.activation = activation
         self.dropout = dropout    
+        self.future_prediction = future_prediction
 
-    def forward(self, x, edge_index=None):
+    def forward(self, x_seq, edge_index_seq):
         '''
         Parameters:
-            x (torch.tensor[num_nodes, input_channels]): input of the model (node features).
-            edge_index (torch.tensor[2, num_edges]): tonsor of the pair of node indexes with edges.
+            x (torch.tensor[seq_length, num_nodes, input_channels]): input of the model (node features).
+            edge_index (torch.tensor[seq_length, 2, num_edges]): tonsor of the pair of node indexes with edges.
 
         Returns:
-            z (torch.tensor[num_nodes, output_channels]): node-wise latent features.
+            z (torch.tensor[seq_length, num_nodes, output_channels]): node-wise latent features.
         '''
-        if edge_index is None:
-            edge_index = self.train_pos_edge_adj_t
+                
+        z_seq = []
+        hx_list = [None]*(len(x_seq)+1)
+        for t, x in enumerate(x_seq):
+            if (self.future_prediction is True) and (t == len(x_seq) - 1):
+                break
 
-        # 線形変換で次元削減して入力とする
-        z = self.lins[0](x, edge_index)
-        
-        x_0 = z
+            # 線形変換で次元削減して入力とする
+            z = self.lins[0](x, edge_index_seq[t])
+            
+            x_0 = z
 
-        if self.num_layers==2:
-            z = z.relu()
+            if self.num_layers==2:
+                z = z.relu()
 
-        if self.decode_modelname in ['VGAE', 'Shifted-VGAE', 'S_VAE']:
-            for i, conv in enumerate(self.convs[:-2]):
+            for i in range(len(self.convs)):
+                idx = t*len(self.convs) + i
+
                 z = F.dropout(z, self.dropout, training = self.training)
-                z = conv(z, x_0, edge_index)
-                z = self.batchnorms[i](z)
-                if self.activation == "relu":
-                    z = z.relu()
-                elif self.activation == "leaky_relu":
-                    z = F.leaky_relu(z, negative_slope=0.01)
-                elif self.activation == "tanh":
-                    z = torch.tanh(z)
 
-            if self.decode_modelname in ['VGAE', 'Shifted-VGAE']:
-                return self.convs[-2](z, x_0, edge_index), self.convs[-1](z, x_0, edge_index)
-            else:
-                return self.convs[-2](z, x_0, edge_index), self.convs[-1](z, edge_index)
-
-        else:
-            for i, conv in enumerate(self.convs):
-                z = F.dropout(z, self.dropout, training = self.training)
-                z = conv(z, x_0, edge_index)
+                z = conv(z, x_0, edge_index_seq[t])
                 if i < len(self.convs) - 1:
                     z = self.batchnorms[i](z)
                     if self.activation == "relu":
@@ -251,7 +243,18 @@ class GCRNII(torch.nn.Module):
                     elif self.activation == "tanh":
                         z = torch.tanh(z)
 
-            return z
+            z_seq.append(z)
+
+        z_seq_tensor = torch.stack(z_seq,0)
+        z_seq_tensor , (h_, c_) = self.recurrents[0](z_seq_tensor)
+
+        for i in range(len(z_seq)):
+            z_seq[i] = z_seq_tensor[i]
+
+        if self.future_prediction is True:
+            z_seq.append(h_[-1])
+
+        return z_seq
 
 
 
