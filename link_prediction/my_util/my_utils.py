@@ -47,14 +47,6 @@ def data_downloader(dataset = 'Cora', data_dir='../data', data_type='static'):
     if dataset in ['Cora', 'CiteSeer', 'PubMed']:
         data = Planetoid(data_dir, dataset, transform=T.NormalizeFeatures())[0]
 
-        df_edge_index = pd.DataFrame(data.edge_index.t().numpy(), columns=['source', 'target'])
-
-        for i in range(df_edge_index.shape[0]):
-            if i in df_edge_index.index:
-                source = df_edge_index.loc[i,'source']
-                target = df_edge_index.loc[i,'target']
-                df_edge_index = df_edge_index.drop(df_edge_index[(df_edge_index['source']==target) & (df_edge_index['target']==source)].index)
-
         data.edge_index = torch.LongTensor(df_edge_index.to_numpy().T)
 
     elif 'Factset' in dataset:
@@ -73,12 +65,6 @@ def data_downloader(dataset = 'Cora', data_dir='../data', data_type='static'):
         edge = pd.read_csv(data_dir + f'/Factset/edges_{year}.csv', usecols=['REL_TYPE','SOURCE_COMPANY_TICKER','TARGET_COMPANY_TICKER']).rename(columns={'SOURCE_COMPANY_TICKER': 'source', 'TARGET_COMPANY_TICKER': 'target'})
         edge = edge[(edge['REL_TYPE']=='CUSTOMER') | (edge['REL_TYPE']=='SUPPLIER')]
         edge = edge[['source','target']].drop_duplicates(ignore_index=True, subset=['source', 'target'])
-
-        for i in range(edge.shape[0]):
-            if i in edge.index:
-                source = edge.loc[i,'source']
-                target = edge.loc[i,'target']
-                edge = edge.drop(edge[(edge['source']==target) & (edge['target']==source)].index)
 
         edge = edge.applymap(lambda x: dic[x] if x in dic.keys() else np.nan)
         edge = edge.dropna(how='any').reset_index(drop=True)
@@ -127,6 +113,10 @@ def data_processor(data, undirected=True, val_ratio=0.05, test_ratio=0.1):
         y_train (numpy.ndarray[num_nodes, num_nodes].flatten()): trainデータのリンクの隣接行列をflattenしたもの.
         mask (numpy.ndarray[num_nodes, num_nodes].flatten()): validation, testのpos_edge, neg_edgeとしてサンプリングしたリンクをFalse、それ以外をTrueとした隣接行列をflattenしたもの.
     '''
+
+    if data.is_undirected() is False:
+        data.edge_index = to_undirected(data.edge_index)
+        print('The graph has been transformed into undirected one.')
 
     # train_test_splitをする前に、エッジのTensorをコピーしておく
     all_pos_edge_index = data.edge_index
