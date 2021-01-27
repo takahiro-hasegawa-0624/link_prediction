@@ -107,8 +107,11 @@ class GCRN(torch.nn.Module):
         '''
                 
         z_seq = []
-        hx_list = [None]*(len(x_seq.size(0))+1)
+        hx_list = [None]*(x_seq.size(0)+1)
         for t, x in enumerate(x_seq):
+            if (self.future_prediction is True) and (t == x_seq.size(0) - 1):
+                break
+
             z = x
             for i in range(len(self.convs)):
                 idx = t*self.num_layers + i
@@ -131,11 +134,7 @@ class GCRN(torch.nn.Module):
             z_seq.append(z)
 
         if self.future_prediction is True:
-            z_seq_tensor = torch.stack(z_seq[:-1],0)
-            z , (h_, c_) = self.recurrents[0](z_seq_tensor)
-            hx = (torch.zeros_like(c_[-1].unsqueeze(0)).to(self.device), c_[-1].unsqueeze(0))
-            z , _ = self.feature_recurrents[0](z[-1].unsqueeze(0), hx)
-            z_seq[-1] = z.squeeze()
+            z_seq.append(hx_list[-1][0]).squeeze()
 
         return z_seq
 
@@ -353,9 +352,8 @@ class EvolveGCNO(torch.nn.Module):
                 z = F.dropout(z, self.dropout, training = self.training)
 
                 W, (h_, c_) = self.recurrents[i](conv.weight[None, :, :], hx_layers[i])
-                print(W.size(), h_.size(), c_.size())
                 hx = (torch.zeros_like(c_).to(self.device), c_)
-                hx_layers[i+1] = hx
+                hx_layers[i] = hx
                 conv.weight = torch.nn.Parameter(W.squeeze())
                 z = conv(z, edge_index_seq[t])
                 if i < len(self.convs) - 1:
