@@ -35,7 +35,7 @@ class GCRN(torch.nn.Module):
             activation (obj`int` or None): activation functionを指定。None, "relu", "leaky_relu", or "tanh". (Default: None)
             dropout (float): 各層のDropoutの割合. (Default: 0.0)
         '''
-        super(GCN, self).__init__()
+        super(GCRN, self).__init__()
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.decode_modelname = decode_modelname
 
@@ -172,7 +172,7 @@ class GCRNII(torch.nn.Module):
             activation (obj`int` or None): activation functionを指定。None, "relu", "leaky_relu", or "tanh". (Default: None)
             dropout (float): 各層のDropoutの割合. (Default: 0.0)
         '''
-        super(GCNII, self).__init__()
+        super(GCRNII, self).__init__()
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.decode_modelname = decode_modelname
 
