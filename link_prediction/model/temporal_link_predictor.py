@@ -216,10 +216,24 @@ class Temporal_Link_Prediction_Model():
 
         self.encode_modelname = encode_modelname
         self.decode_modelname = decode_modelname
+        self.encode_model = None
         self.self_loop_mask = self_loop_mask            
 
                             
-        if self.encode_modelname == 'EvolveGCNO':
+        if self.encode_modelname == 'GCRN':
+            self.encode_model = GCRN(
+                data_list = self.data_list,
+                decode_modelname = self.decode_modelname,
+                train_pos_edge_adj_t = self.train_pos_edge_adj_t,
+                num_hidden_channels = num_hidden_channels, 
+                num_layers = num_layers, 
+                hidden_channels = hidden_channels,
+                activation = activation,
+                dropout = dropout,
+                future_prediction = self.future_prediction
+            ).to(self.device)
+        
+        elif self.encode_modelname == 'EvolveGCNO':
             self.encode_model = EvolveGCNO(
                 data_list = self.data_list,
                 decode_modelname = self.decode_modelname,
