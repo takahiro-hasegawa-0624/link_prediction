@@ -107,10 +107,10 @@ class GCRN(torch.nn.Module):
         '''
                 
         z_seq = []
-        hx_list = [None]*len(x_seq.size(0))
+        hx_list = [None]*(len(x_seq.size(0))+1)
         for t, x in enumerate(x_seq):
             z = x
-            for i, conv in enumerate(self.convs):
+            for i in range(len(self.convs)):
                 idx = t*self.num_layers + i
                 z = F.dropout(z, self.dropout, training = self.training)
 
@@ -124,8 +124,10 @@ class GCRN(torch.nn.Module):
                     elif self.activation == "tanh":
                         z = torch.tanh(z)
             
-            W, (h_, c_) = self.recurrents[0](z[None, :, :], hx_list[t])
-
+            z, (h_, c_) = self.recurrents[0](z[None, :, :], hx_list[t])
+            hx = (torch.zeros_like(c_).to(self.device), c_)
+            hx_layers[i+1] = hx
+            conv.weight = torch.nn.Parameter(W.squeeze())
             z_seq.append(z)
 
         if self.future_prediction is True:
@@ -297,7 +299,7 @@ class EvolveGCNO(torch.nn.Module):
 
             self.num_layers = num_layers
             self.convs.append(GCNConv(data_list[-1].x.size(1), num_hidden_channels))
-            self.recurrents.append(LSTM(input_size = num_hidden_channels, hidden_size = num_hidden_channels))
+            self.recurrents.append(LSTM(input_size = data_list[-1].x.size(1), hidden_size = num_hidden_channels))
             for _ in range(num_layers - 1):
                 self.convs.append(GCNConv(num_hidden_channels, num_hidden_channels))
                 self.recurrents.append(LSTM(input_size = num_hidden_channels, hidden_size = num_hidden_channels))
