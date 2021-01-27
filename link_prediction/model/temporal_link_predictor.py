@@ -429,6 +429,7 @@ class Temporal_Link_Prediction_Model():
         link_labels = my_utils.get_link_labels(self.data_list[-1].train_pos_edge_index, neg_edge_index_seq[-1]).to(self.device)
         weight = my_utils.get_loss_weight(self.data_list[-1].train_pos_edge_index, neg_edge_index_seq[-1], self.negative_sampling_ratio).to(self.device)
 
+        print(len(z_seq))
         for t, z in enumerate(z_seq):
             if t == len(z_seq)-2:
                 break
