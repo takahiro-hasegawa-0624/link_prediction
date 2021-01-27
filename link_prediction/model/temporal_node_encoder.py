@@ -138,9 +138,9 @@ class GCRN(torch.nn.Module):
         for i in range(len(z_seq)):
             z_seq[i] = z_seq_tensor[i]
 
-        if self.future_prediction is False:
-            # z_seq.append(h_[-1][0]).squeeze()
-            z_seq = z_seq[:-1]
+        if self.future_prediction is True:
+            z_seq.append(h_[-1][0]).squeeze()
+            # z_seq = z_seq[:-1]
 
         return z_seq
 
