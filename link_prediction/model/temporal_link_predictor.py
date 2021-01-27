@@ -28,7 +28,7 @@ import torch.nn.functional as F
 from torch_sparse import SparseTensor
 from torch_geometric.utils import negative_sampling
 
-from link_prediction.model.temporal_node_encoder import EvolveGCNO, EvolveGCNIIO
+from link_prediction.model.temporal_node_encoder import GCRN, GCRNII, EvolveGCNO, EvolveGCNIIO
 from link_prediction.model.link_decoder import GAE, VGAE, S_VAE, Cat_Linear_Decoder, Mean_Linear_Decoder
 from link_prediction.my_util import my_utils
 
