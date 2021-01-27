@@ -114,7 +114,7 @@ class GCRN(torch.nn.Module):
                 break
 
             z = x
-            for i in range(len(self.convs)):
+            for i in range(self.num_layers):
                 idx = t*len(x_seq) + i
                 print(idx, z.size())
 
