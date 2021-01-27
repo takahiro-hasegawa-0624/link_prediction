@@ -23,7 +23,7 @@ class GCRN(torch.nn.Module):
         hidden_channels_str (str): 各層の出力の次元を文字列として記録.
         train_pos_edge_adj_t (torch.SparseTensor[2, num_pos_edges]): trainデータのリンク.
     '''     
-    def __init__(self, data_list, decode_modelname, train_pos_edge_adj_t, num_hidden_channels = None, num_layers = None, hidden_channels = None, activation = None, dropout = 0.0):
+    def __init__(self, data_list, decode_modelname, train_pos_edge_adj_t, num_hidden_channels = None, num_layers = None, hidden_channels = None, activation = None, dropout = 0.0, future_prediction=True):
         '''
         Args:
             data (torch_geometric.data.Data): グラフデータ.
@@ -95,6 +95,7 @@ class GCRN(torch.nn.Module):
 
         self.activation = activation
         self.dropout = dropout
+        self.future_prediction = future_prediction
 
     def forward(self, x_seq, edge_index_seq):
         '''
@@ -126,15 +127,17 @@ class GCRN(torch.nn.Module):
                         z = F.leaky_relu(z, negative_slope=0.01)
                     elif self.activation == "tanh":
                         z = torch.tanh(z)
-            
-            z, (h_, c_) = self.recurrents[0](z[None, :, :], hx_list[t])
-            hx = (torch.zeros_like(c_).to(self.device), c_)
-            hx_list[t+1] = hx
-            z = z.squeeze()
-            z_seq.append(z)
+
+                z_seq.append(z)
+
+        z_seq_tensor = torch.stack(z_seq,0)
+        z_seq_tensor , (h_, c_) = self.recurrents[0](z_seq_tensor)
+
+        for i in range(len(z_seq)):
+            z_seq[i] = z_seq_tensor[i]
 
         if self.future_prediction is True:
-            z_seq.append(hx_list[-1][0]).squeeze()
+            z_seq.append(h_[-1][0]).squeeze()
 
         return z_seq
 
