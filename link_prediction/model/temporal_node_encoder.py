@@ -116,6 +116,8 @@ class GCRN(torch.nn.Module):
             z = x
             for i in range(len(self.convs)):
                 idx = t*len(x_seq) + i
+                print(idx, z.size())
+
                 z = F.dropout(z, self.dropout, training = self.training)
 
                 z = self.convs[idx](z, edge_index_seq[t])
