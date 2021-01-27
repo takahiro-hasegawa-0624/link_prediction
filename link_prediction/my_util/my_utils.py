@@ -65,10 +65,10 @@ def data_downloader(dataset = 'Cora', data_dir='../data', data_type='static'):
         edge = edge[['source','target']].drop_duplicates(ignore_index=True, subset=['source', 'target'])
 
         for i in range(edge.shape[0]):
-        if i in edge.index:
-            source = edge.loc[i,'source']
-            target = edge.loc[i,'target']
-            edge = edge.drop(edge[(edge['source']==target) & (edge['target']==source)].index)
+            if i in edge.index:
+                source = edge.loc[i,'source']
+                target = edge.loc[i,'target']
+                edge = edge.drop(edge[(edge['source']==target) & (edge['target']==source)].index)
 
         edge = edge.applymap(lambda x: dic[x] if x in dic.keys() else np.nan)
         edge = edge.dropna(how='any').reset_index(drop=True)
