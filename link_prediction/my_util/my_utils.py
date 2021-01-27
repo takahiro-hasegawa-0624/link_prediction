@@ -97,6 +97,10 @@ def data_downloader(dataset = 'Cora', data_dir='../data', data_type='static'):
     print(f'num_nodes: {data.num_nodes}')
     print(f'num_edges: {data.num_edges}\n')
 
+    if data.is_undirected() is False:
+        data.edge_index = to_undirected(data.edge_index)
+        print('The graph has been transformed into undirected one.')
+
     return data
 
 def data_processor(data, undirected=True, val_ratio=0.05, test_ratio=0.1):
@@ -113,10 +117,6 @@ def data_processor(data, undirected=True, val_ratio=0.05, test_ratio=0.1):
         y_train (numpy.ndarray[num_nodes, num_nodes].flatten()): trainデータのリンクの隣接行列をflattenしたもの.
         mask (numpy.ndarray[num_nodes, num_nodes].flatten()): validation, testのpos_edge, neg_edgeとしてサンプリングしたリンクをFalse、それ以外をTrueとした隣接行列をflattenしたもの.
     '''
-
-    if data.is_undirected() is False:
-        data.edge_index = to_undirected(data.edge_index)
-        print('The graph has been transformed into undirected one.')
 
     # train_test_splitをする前に、エッジのTensorをコピーしておく
     all_pos_edge_index = data.edge_index
