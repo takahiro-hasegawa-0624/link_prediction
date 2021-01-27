@@ -124,6 +124,10 @@ def data_processor(data, undirected=True, val_ratio=0.05, test_ratio=0.1):
     data.train_mask = data.val_mask = data.test_mask = data.y = None
     data = train_test_split_edges(data, val_ratio=val_ratio, test_ratio=test_ratio)
 
+    if (val_ratio + test_ratio ==1) and (data.train_pos_edge_index.size(1) > 0):
+        data.test_pos_edge_index = torch.cat([data.test_pos_edge_index, data.train_pos_edge_index], dim=-1)
+        data.train_pos_edge_index = torch.LongTensor([[],[]])
+
     print('train test split has been done.')
     print(data)
     print('')
