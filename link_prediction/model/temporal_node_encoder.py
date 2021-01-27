@@ -54,8 +54,8 @@ class GCRN(torch.nn.Module):
 
             self.num_layers = num_layers
 
-            for _ in range(len(data_list)):
-                self.convs.append(GCNConv(data_list[-1].x.size(1), num_hidden_channels))
+            for t in range(len(data_list)):
+                self.convs.append(GCNConv(data_list[t].x.size(1), num_hidden_channels))
                 for _ in range(num_layers - 1):
                     self.convs.append(GCNConv(num_hidden_channels, num_hidden_channels))
 
@@ -78,8 +78,8 @@ class GCRN(torch.nn.Module):
 
             self.num_layers = len(hidden_channels)
 
-            for _ in range(len(data_list)):
-                self.convs.append(GCNConv(data_list[-1].x.size(1), hidden_channels[0]))
+            for t in range(len(data_list)):
+                self.convs.append(GCNConv(data_list[t].x.size(1), hidden_channels[0]))
                 for i in range(len(hidden_channels) - 1):
                     self.convs.append(GCNConv(hidden_channels[i], hidden_channels[i+1]))
 
@@ -110,12 +110,12 @@ class GCRN(torch.nn.Module):
         z_seq = []
         hx_list = [None]*(len(x_seq)+1)
         for t, x in enumerate(x_seq):
-            if (self.future_prediction is True) and (t == x_seq.size(0) - 1):
+            if (self.future_prediction is True) and (t == len(x_seq) - 1):
                 break
 
             z = x
             for i in range(len(self.convs)):
-                idx = t*self.num_layers + i
+                idx = t*len(x_seq) + i
                 z = F.dropout(z, self.dropout, training = self.training)
 
                 z = self.convs[idx](z, edge_index_seq[t])
