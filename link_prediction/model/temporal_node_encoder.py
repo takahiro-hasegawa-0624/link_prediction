@@ -237,7 +237,7 @@ class GCRNII(torch.nn.Module):
 
                 z = self.convs[idx](z, x_0, edge_index_seq[t])
                 if i < len(self.convs) - 1:
-                    z = self.batchnorms[idx](z)
+                    z = self.batchnorms[idx-t](z)
                     if self.activation == "relu":
                         z = z.relu()
                     elif self.activation == "leaky_relu":
