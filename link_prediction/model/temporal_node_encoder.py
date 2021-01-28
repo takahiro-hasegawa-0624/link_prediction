@@ -182,23 +182,25 @@ class GCRNII(torch.nn.Module):
         self.hidden_channels_str = (f'{num_hidden_channels}_'*num_layers)[:-1]
 
         self.lins = torch.nn.ModuleList()
-        self.lins.append(GCNConv(data.x.size(1), num_hidden_channels))
+        self.lins.append(GCNConv(data_list[-1].x.size(1), num_hidden_channels))
 
         self.convs = torch.nn.ModuleList()
         self.recurrents = torch.nn.ModuleList()
-        for layer in range(num_layers - 1):
-            self.convs.append(GCN2Conv(num_hidden_channels, alpha, theta, layer+1, shared_weights = shared_weights, normalize = False))
 
-        if self.decode_modelname in ['VGAE', 'Shifted-VGAE']:
-            self.convs.append(GCN2Conv(num_hidden_channels, alpha, theta, layer+1, shared_weights = shared_weights, normalize = False))
-        if self.decode_modelname == 'S_VAE':
-            self.convs.append(GCNConv(num_hidden_channels, 1))
+        for t in range(len(data_list)):
+            for layer in range(num_layers - 1):
+                self.convs.append(GCN2Conv(num_hidden_channels, alpha, theta, layer+1, shared_weights = shared_weights, normalize = False))
 
-        self.batchnorms = torch.nn.ModuleList()
-        for layer in range(num_layers - 2):
-            self.batchnorms.append(torch.nn.BatchNorm1d(num_hidden_channels))
+            if self.decode_modelname in ['VGAE', 'Shifted-VGAE']:
+                self.convs.append(GCN2Conv(num_hidden_channels, alpha, theta, layer+1, shared_weights = shared_weights, normalize = False))
+            if self.decode_modelname == 'S_VAE':
+                self.convs.append(GCNConv(num_hidden_channels, 1))
 
-        self.recurrents.append(LSTM(input_size = hidden_channels[-1], hidden_size = hidden_channels[-1]))
+            self.batchnorms = torch.nn.ModuleList()
+            for layer in range(num_layers - 2):
+                self.batchnorms.append(torch.nn.BatchNorm1d(num_hidden_channels))
+
+        self.recurrents.append(LSTM(input_size = num_hidden_channels, hidden_size = num_hidden_channels))
 
         self.activation = activation
         self.dropout = dropout    
@@ -228,7 +230,7 @@ class GCRNII(torch.nn.Module):
             if self.num_layers==2:
                 z = z.relu()
 
-            for i in range(len(self.convs)):
+            for i, conv in enumerate(self.convs):
                 idx = t*len(self.convs) + i
 
                 z = F.dropout(z, self.dropout, training = self.training)
