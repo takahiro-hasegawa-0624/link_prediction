@@ -230,14 +230,14 @@ class GCRNII(torch.nn.Module):
             if self.num_layers==2:
                 z = z.relu()
 
-            for i, conv in enumerate(self.convs):
+            for i in range(len(self.convs)):
                 idx = t*len(self.convs) + i
 
                 z = F.dropout(z, self.dropout, training = self.training)
 
-                z = conv(z, x_0, edge_index_seq[t])
+                z = self.convs[idx](z, x_0, edge_index_seq[t])
                 if i < len(self.convs) - 1:
-                    z = self.batchnorms[i](z)
+                    z = self.batchnorms[idx](z)
                     if self.activation == "relu":
                         z = z.relu()
                     elif self.activation == "leaky_relu":
