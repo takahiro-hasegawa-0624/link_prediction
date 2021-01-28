@@ -236,7 +236,7 @@ class GCRNII(torch.nn.Module):
                 z = F.dropout(z, self.dropout, training = self.training)
 
                 z = self.convs[idx](z, x_0, edge_index_seq[t])
-                if i < len(self.convs) - 1:
+                if i < self.num_layers - 2:
                     z = self.batchnorms[idx-t](z)
                     if self.activation == "relu":
                         z = z.relu()
