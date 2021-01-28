@@ -230,8 +230,8 @@ class GCRNII(torch.nn.Module):
             if self.num_layers==2:
                 z = z.relu()
 
-            for i in range(len(self.convs)):
-                idx = t*len(self.convs) + i
+            for i in range(self.num_layers-1):
+                idx = t*(self.num_layers-1) + i
 
                 z = F.dropout(z, self.dropout, training = self.training)
 
