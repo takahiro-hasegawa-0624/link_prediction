@@ -159,7 +159,7 @@ class GCRNII(torch.nn.Module):
         train_pos_edge_adj_t (torch.SparseTensor[2, num_pos_edges]): trainデータのリンク.
     '''    
 
-    def __init__(self, data, decode_modelname, train_pos_edge_adj_t, num_hidden_channels, num_layers, alpha=0.1, theta=0.5, shared_weights = True, activation = None, dropout = 0.0, future_prediction=True):
+    def __init__(self, data_list, decode_modelname, train_pos_edge_adj_t, num_hidden_channels, num_layers, alpha=0.1, theta=0.5, shared_weights = True, activation = None, dropout = 0.0, future_prediction=True):
         '''
         Args:
             data (torch_geometric.data.Data): グラフデータ.
