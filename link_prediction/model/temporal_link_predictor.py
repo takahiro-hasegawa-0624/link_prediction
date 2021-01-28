@@ -232,6 +232,21 @@ class Temporal_Link_Prediction_Model():
                 dropout = dropout,
                 future_prediction = self.future_prediction
             ).to(self.device)
+
+        if self.encode_modelname == 'GCRNII':
+            self.encode_model = GCRNII(
+                data_list = self.data_list,
+                decode_modelname = self.decode_modelname,
+                train_pos_edge_adj_t = self.train_pos_edge_adj_t,
+                num_hidden_channels = num_hidden_channels, 
+                num_layers = num_layers, 
+                alpha=alpha, 
+                theta=theta, 
+                shared_weights=True, 
+                activation = activation,
+                dropout = dropout,
+                future_prediction = self.future_prediction
+            ).to(self.device)
         
         elif self.encode_modelname == 'EvolveGCNO':
             self.encode_model = EvolveGCNO(
@@ -260,7 +275,6 @@ class Temporal_Link_Prediction_Model():
                 dropout=dropout,
                 future_prediction = self.future_prediction
             ).to(self.device)
-
 
         if self.decode_modelname == 'GAE':
             self.decode_model = GAE(
