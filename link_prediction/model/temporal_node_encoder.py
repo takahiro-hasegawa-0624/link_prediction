@@ -185,6 +185,7 @@ class GCRNII(torch.nn.Module):
         self.lins.append(GCNConv(data_list[-1].x.size(1), num_hidden_channels))
 
         self.convs = torch.nn.ModuleList()
+        self.batchnorms = torch.nn.ModuleList()
         self.recurrents = torch.nn.ModuleList()
 
         for t in range(len(data_list)):
@@ -196,7 +197,6 @@ class GCRNII(torch.nn.Module):
             if self.decode_modelname == 'S_VAE':
                 self.convs.append(GCNConv(num_hidden_channels, 1))
 
-            self.batchnorms = torch.nn.ModuleList()
             for layer in range(num_layers - 2):
                 self.batchnorms.append(torch.nn.BatchNorm1d(num_hidden_channels))
 
