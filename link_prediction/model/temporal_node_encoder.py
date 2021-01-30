@@ -138,7 +138,9 @@ class GCRN(torch.nn.Module):
             z_seq[i] = z_seq_tensor[i]
 
         if self.future_prediction is True:
-            z_seq.append(h_[-1])
+            hx = (torch.zeros_like(c_[-1].unsqueeze(0)).to(self.device), c_[-1].unsqueeze(0))
+            z, (h_, c_) = self.recurrents[0](h_[-1].unsqueeze(0), hx)
+            z_seq.append(z.squeeze())
 
         return z_seq
 
@@ -254,7 +256,9 @@ class GCRNII(torch.nn.Module):
             z_seq[i] = z_seq_tensor[i]
 
         if self.future_prediction is True:
-            z_seq.append(h_[-1])
+            hx = (torch.zeros_like(c_[-1].unsqueeze(0)).to(self.device), c_[-1].unsqueeze(0))
+            z, (h_, c_) = self.recurrents[0](h_[-1].unsqueeze(0), hx)
+            z_seq.append(z.squeeze())
 
         return z_seq
 
