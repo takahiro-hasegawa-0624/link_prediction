@@ -425,7 +425,7 @@ class Temporal_Link_Prediction_Model():
             neg_edge_index_seq.append(neg_edge_index)
 
         neg_edge_index = negative_sampling(
-            edge_index = self.edge_index_for_negative_sampling,
+            edge_index = self.train_pos_edge_index,
             num_nodes = self.data_list[-1].num_nodes,
             num_neg_samples = self.num_negative_samples
         )
