@@ -356,7 +356,7 @@ class Link_Prediction_LINE():
         edge_index = torch.cat([self.data.train_pos_edge_index, neg_edge_index], dim = -1)
 
         z = self.decode_model(edge_index)
-        link_probs = torch,cat([torch.sigmoid(z[:self.data.train_pos_edge_index.size(1)]), torch.sigmoid(-z[self.data.train_pos_edge_index.size(1):])], dim=-1)
+        link_probs = torch.cat([torch.sigmoid(z[:self.data.train_pos_edge_index.size(1)]), torch.sigmoid(-z[self.data.train_pos_edge_index.size(1):])], dim=-1)
 
         if torch.isnan(link_probs).sum()>0:
             print('np.nan occurred')
@@ -407,7 +407,7 @@ class Link_Prediction_LINE():
             return None, None, None
 
         z = self.decode_model(edge_index)
-        link_probs = torch,cat([torch.sigmoid(z[:pos_edge_index.size(1)]), torch.sigmoid(-z[pos_edge_index.size(1):])], dim=-1)
+        link_probs = torch.cat([torch.sigmoid(z[:pos_edge_index.size(1)]), torch.sigmoid(-z[pos_edge_index.size(1):])], dim=-1)
         
         if torch.isnan(link_probs).sum()>0:
             print('np.nan occurred')
@@ -437,7 +437,7 @@ class Link_Prediction_LINE():
         edge_index = torch.cat([pos_edge_index, neg_edge_index], dim = -1)
 
         z = self.decode_model(edge_index)
-        link_probs = torch,cat([torch.sigmoid(z[:pos_edge_index.size(1)]), torch.sigmoid(-z[pos_edge_index.size(1):])], dim=-1)
+        link_probs = torch.cat([torch.sigmoid(z[:pos_edge_index.size(1)]), torch.sigmoid(-z[pos_edge_index.size(1):])], dim=-1)
 
         if torch.isnan(link_probs).sum()>0:
             print('np.nan occurred')
