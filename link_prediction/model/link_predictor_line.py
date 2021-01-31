@@ -229,7 +229,8 @@ class Link_Prediction_LINE():
         self.self_loop_mask = self_loop_mask            
 
 
-        self.encode_model = self.decode_model = LINE(
+        self.encode_model = None
+        self.decode_model = LINE(
             data = self.data,
             num_hidden_channels = num_hidden_channels,
             order= order
@@ -334,7 +335,7 @@ class Link_Prediction_LINE():
             link_probs (torch.Tensor[num_train_node + num_negative_samples]): trainデータのedge_indexに対応する存在確率. to(device)していない.
             z (torch.Tensor[num_train_node, output_channels]): ノードの特徴量テンソル. to(device)していない.
         '''
-        self.encode_model.train()
+        # self.encode_model.train()
         self.decode_model.train()
         
 
@@ -396,7 +397,7 @@ class Link_Prediction_LINE():
             link_labels (numpy.ndarray[num_validation_pos_node + num_validation_neg_node]): validationデータのリedge_indexに対応する正解ラベル. to(device)していない.
             link_probs (torch.Tensor[num_validation_pos_node + num_validation_neg_node]): validationデータのリedge_indexに対応する正解ラベル. to(device)していない.
         '''
-        self.encode_model.eval()
+        # self.encode_model.eval()
         self.decode_model.eval()
         
         pos_edge_index = self.data['val_pos_edge_index']
@@ -429,7 +430,7 @@ class Link_Prediction_LINE():
             link_labels (numpy.ndarray[num_test_pos_node + num_test_neg_node]): testデータのリedge_indexに対応する正解ラベル. to(device)していない.
             link_probs (torch.Tensor[num_test_pos_node + num_test_neg_node]): testデータのedge_indexに対応する予測確率. to(device)していない.
         '''
-        self.encode_model.eval()
+        # self.encode_model.eval()
         self.decode_model.eval()
         
         pos_edge_index = self.data['test_pos_edge_index']
@@ -566,7 +567,7 @@ class Link_Prediction_LINE():
             path = self.path_best_model
 
         else:
-            self.encode_model.eval()
+            # self.encode_model.eval()
             self.decode_model.eval()
             # z = self.decode_model.encode(self.data.x)
             epochs = self.num_epochs
