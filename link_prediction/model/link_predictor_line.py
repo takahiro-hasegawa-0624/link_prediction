@@ -154,7 +154,7 @@ class Link_Prediction_LINE():
         if data is None:
             self.data = my_utils.data_downloader(dataset = dataset_name, data_dir=data_dir)
 
-        self.all_pos_edge_index, self.train_pos_edge_adj_t, self.y_true, self.y_train_cpu, self.mask = my_utils.data_processor(data=self.data, undirected=True)
+        self.all_pos_edge_index, self.train_pos_edge_adj_t, self.y_true, self.y_train_cpu, self.mask = my_utils.data_processor(data=self.data, undirected=True, val_ratio=val_ratio, test_ratio=val_ratio)
 
         self.data = self.data.to(self.device)
         self.all_pos_edge_index = self.all_pos_edge_index.to(self.device)
