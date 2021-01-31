@@ -366,7 +366,7 @@ class Link_Prediction_LINE():
         link_labels = my_utils.get_link_labels(self.data.train_pos_edge_index, neg_edge_index).to(self.device)
         weight = my_utils.get_loss_weight(self.data.train_pos_edge_index, neg_edge_index, self.negative_sampling_ratio).to(self.device)
 
-        loss = F.binary_cross_entropy(link_probs, link_labels, weight = weight)
+        loss = -torch.log(link_probs).mean()
 
         loss.backward()
 
@@ -415,7 +415,7 @@ class Link_Prediction_LINE():
             link_probs[torch.isnan(link_probs)]=0.5
         link_labels = my_utils.get_link_labels(pos_edge_index, neg_edge_index).to(self.device)
 
-        loss = F.binary_cross_entropy(link_probs, link_labels)
+        loss = -torch.log(link_probs).mean()
         
         return float(loss.cpu()), link_labels.cpu(), link_probs.cpu()
 
@@ -445,7 +445,7 @@ class Link_Prediction_LINE():
             link_probs[torch.isnan(link_probs)]=0.5
         link_labels = my_utils.get_link_labels(pos_edge_index, neg_edge_index).to(self.device)
 
-        loss = F.binary_cross_entropy(link_probs, link_labels)
+        loss = -torch.log(link_probs).mean()
         
         return float(loss.cpu()), link_labels.cpu(), link_probs.cpu()
 
