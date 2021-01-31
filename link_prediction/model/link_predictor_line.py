@@ -697,7 +697,7 @@ class Link_Prediction_LINE():
             shutil.rmtree(self.save_dir)
 
         # 結果集約csvの作成
-        path_csv = f'{self.base_dir}/output/summary.csv'
+        path_csv = f'{self.base_dir}/output/summary_line.csv'
         if os.path.isfile(path_csv):
             self.summary = pd.read_csv(path_csv)
 
