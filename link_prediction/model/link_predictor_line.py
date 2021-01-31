@@ -60,7 +60,7 @@ class LINE(torch.nn.Module):
 
         Z = torch.sum(torch.cat([Z1, Z21, Z22], dim=0), dim=0)
 
-        print(Z.size())
+        # print(Z.size())
 
         return torch.sigmoid(Z)
 
@@ -226,6 +226,10 @@ class Link_Prediction_LINE():
         self.optimizer['encoder_convs'] = torch.optim.Adam(self.decode_model.parameters(), lr=2e-2, weight_decay=1e-3)
 
         self.scheduler = {}
+        self.scheduler['decoder_bias'] = None
+        self.scheduler['decoder_lins'] = None
+        self.scheduler['encoder_convs'] = None
+        self.scheduler['encoder_lins'] = None
 
         self.num_hidden_channels = num_hidden_channels
         self.num_layers = num_layers
