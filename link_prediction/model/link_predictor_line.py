@@ -58,9 +58,9 @@ class LINE(torch.nn.Module):
         Z21 = torch.sum(Z2_s1 * Z2_t1, dim=-1).unsqueeze(0)
         Z22 = torch.sum(Z2_s2 * Z2_t2, dim=-1).unsqueeze(0)
 
-
         Z = torch.sum(torch.cat([Z1, Z21, Z22], dim=0), dim=0)
 
+        print(Z.size())
 
         return torch.sigmoid(Z)
 
