@@ -172,8 +172,8 @@ class Link_Prediction_LINE():
                 hidden_channels = None, 
                 negative_injection = False,
                 jk_mode = 'cat', 
-                alpha = 0.1, 
-                theta = 0.5, 
+                alpha = 0, 
+                theta = 0, 
                 shared_weights = True, 
                 dropout = 0.0,
                 negative_sampling_ratio = 1,
@@ -808,7 +808,7 @@ class Link_Prediction_LINE():
                 log_dic['lins_lr'] = self.scheduler['encoder_lins'].base_lrs[0]
 
         log_dic['num_layers'] = self.num_layers
-        log_dic['hidden_channels'] = self.encode_model.hidden_channels_str
+        log_dic['hidden_channels'] = self.hidden_channels_str
         log_dic['negative_sampling_ratio'] = self.negative_sampling_ratio
         log_dic['num_epochs'] = self.num_epochs
         log_dic['validation'] = validation
