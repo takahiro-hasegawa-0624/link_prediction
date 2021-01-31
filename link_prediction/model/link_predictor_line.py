@@ -33,34 +33,46 @@ from link_prediction.model.link_decoder import GAE, VGAE, S_VAE, Cat_Linear_Deco
 from link_prediction.my_util import my_utils
 
 class LINE(torch.nn.Module):
-    def __init__(self, data, num_hidden_channels=64):
+    def __init__(self, data, num_hidden_channels=64, order=1):
         super(LINE, self).__init__()
 
         self.num_hidden_channels = num_hidden_channels
+        self.order = order
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-        self.emb1 = torch.nn.Embedding(data.x.size(0), num_hidden_channels)
+        if self.order in [0,1]:
+            self.emb1 = torch.nn.Embedding(data.x.size(0), num_hidden_channels)
         
-        self.emb21 = torch.nn.Embedding(data.x.size(0), num_hidden_channels)
-        self.emb22 = torch.nn.Embedding(data.x.size(0), num_hidden_channels)
+        if self.order in [9,2]:
+            self.emb21 = torch.nn.Embedding(data.x.size(0), num_hidden_channels)
+            self.emb22 = torch.nn.Embedding(data.x.size(0), num_hidden_channels)
 
     def forward(self, edge_index):
-        Z1_s = self.emb1(edge_index[0])
-        Z1_t = self.emb1(edge_index[1])
+        if self.order in [0,1]:
+            Z1_s = self.emb1(edge_index[0])
+            Z1_t = self.emb1(edge_index[1])
 
-        Z2_s1 = self.emb21(edge_index[0])
-        Z2_t1 = self.emb22(edge_index[1])
+            Z1 = torch.sum(Z1_s * Z1_t, dim=-1)
 
-        Z2_s2 = self.emb21(edge_index[1])
-        Z2_t2 = self.emb22(edge_index[0])
+        if self.order in [0,2]:
+            Z2_s1 = self.emb21(edge_index[0])
+            Z2_t1 = self.emb22(edge_index[1])
 
-        Z1 = torch.sum(Z1_s * Z1_t, dim=-1).unsqueeze(0)
-        Z21 = torch.sum(Z2_s1 * Z2_t1, dim=-1).unsqueeze(0)
-        Z22 = torch.sum(Z2_s2 * Z2_t2, dim=-1).unsqueeze(0)
+            Z2_s2 = self.emb21(edge_index[1])
+            Z2_t2 = self.emb22(edge_index[0])
 
-        Z = torch.sum(torch.cat([Z1, Z21, Z22], dim=0), dim=0)
+            Z21 = torch.sum(Z2_s1 * Z2_t1, dim=-1).unsqueeze(0)
+            Z22 = torch.sum(Z2_s2 * Z2_t2, dim=-1).unsqueeze(0)
+            Z2 = torch.sum(torch.cat([Z21, Z22], dim=0), dim=0)
 
-        # print(Z.size())
+        if self.order == 0:
+            Z = torch.sum(torch.cat([Z1.unsqueeze(0), Z2.unsqueeze(0)], dim=0), dim=0)
+
+        elif self.order == 1:
+            Z = Z1
+
+        elif self.order == 2:
+            Z = Z2
 
         return torch.sigmoid(Z)
 
@@ -808,7 +820,7 @@ class Link_Prediction_LINE():
                 log_dic['lins_lr'] = self.scheduler['encoder_lins'].base_lrs[0]
 
         log_dic['num_layers'] = self.num_layers
-        log_dic['hidden_channels'] = self.hidden_channels_str
+        log_dic['hidden_channels'] = None
         log_dic['negative_sampling_ratio'] = self.negative_sampling_ratio
         log_dic['num_epochs'] = self.num_epochs
         log_dic['validation'] = validation
