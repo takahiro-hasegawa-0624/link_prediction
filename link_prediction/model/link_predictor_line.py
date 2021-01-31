@@ -54,9 +54,9 @@ class LINE(torch.nn.Module):
         Z2_s2 = self.emb21(edge_index[1])
         Z2_t2 = self.emb22(edge_index[0])
 
-        Z1 = torch.sum(Z1_s * Z1_t, dim=-1)
-        Z21 = torch.sum(Z2_s1 * Z2_t1, dim=-1)
-        Z22 = torch.sum(Z2_s2 * Z2_t2, dim=-1)
+        Z1 = torch.sum(Z1_s * Z1_t, dim=-1).unsqueeze(0)
+        Z21 = torch.sum(Z2_s1 * Z2_t1, dim=-1).unsqueeze(0)
+        Z22 = torch.sum(Z2_s2 * Z2_t2, dim=-1).unsqueeze(0)
 
         print(Z1.size(), Z21.size(), Z22.size())
 
