@@ -39,10 +39,10 @@ class LINE(torch.nn.Module):
         self.num_hidden_channels = num_hidden_channels
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-        self.emb1 = torch.nn.Embedding(data.x.size(1), num_hidden_channels)
+        self.emb1 = torch.nn.Embedding(data.x.size(0), num_hidden_channels)
         
-        self.emb21 = torch.nn.Embedding(data.x.size(1), num_hidden_channels)
-        self.emb22 = torch.nn.Embedding(data.x.size(1), num_hidden_channels)
+        self.emb21 = torch.nn.Embedding(data.x.size(0), num_hidden_channels)
+        self.emb22 = torch.nn.Embedding(data.x.size(0), num_hidden_channels)
 
     def forward(self, edge_index):
         Z1_s = self.emb1(edge_index[0])
