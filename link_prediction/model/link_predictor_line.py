@@ -43,7 +43,7 @@ class LINE(torch.nn.Module):
         if self.order in [0,1]:
             self.emb1 = torch.nn.Embedding(data.x.size(0), num_hidden_channels)
         
-        if self.order in [9,2]:
+        if self.order in [0,2]:
             self.emb21 = torch.nn.Embedding(data.x.size(0), num_hidden_channels)
             self.emb22 = torch.nn.Embedding(data.x.size(0), num_hidden_channels)
 
