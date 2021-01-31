@@ -220,7 +220,7 @@ class Link_Prediction_LINE():
         self.scheduler = {}
 
         self.num_hidden_channels = num_hidden_channels
-        self.num_layers = self.encode_model.num_layers
+        self.num_layers = num_layers
         self.hidden_channels = hidden_channels
         self.negative_injection = negative_injection
         self.alpha = alpha
