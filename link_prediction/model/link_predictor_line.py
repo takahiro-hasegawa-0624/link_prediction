@@ -39,22 +39,28 @@ class LINE(torch.nn.Module):
         self.num_hidden_channels = num_hidden_channels
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-        self.emb1 = torch.nn.Embedding(data.x.size(1), num_hidden_channels-2*(num_hidden_channels//4))
+        self.emb1 = torch.nn.Embedding(data.x.size(1), num_hidden_channels)
         
-        self.emb21 = torch.nn.Embedding(data.x.size(1), num_hidden_channels//4)
-        self.emb22 = torch.nn.Embedding(data.x.size(1), num_hidden_channels//4)
+        self.emb21 = torch.nn.Embedding(data.x.size(1), num_hidden_channels)
+        self.emb22 = torch.nn.Embedding(data.x.size(1), num_hidden_channels)
 
     def forward(self, edge_index):
-        Z1_s = self.emb1(edge_index[0]).to(self.device)
-        Z1_t = self.emb1(edge_index[1]).to(self.device)
+        Z1_s = self.emb1(edge_index[0])
+        Z1_t = self.emb1(edge_index[1])
 
-        Z2_s = self.emb21(torch.cat([edge_index[0], edge_index[1]], dim=-1)).to(self.device)
-        Z2_t = self.emb22(torch.cat([edge_index[1], edge_index[0]], dim=-1)).to(self.device)
+        Z2_s1 = self.emb2(edge_index[0])
+        Z2_t1 = self.emb2(edge_index[1])
 
-        Z1 = torch.diagonal(torch.mm(Z1_s, Z1_t.T))
-        Z2 = torch.diagonal(torch.mm(Z2_s, Z2_t.T))
+        Z2_s2 = self.emb2(edge_index[1])
+        Z2_t2 = self.emb2(edge_index[0])
 
-        return torch.sigmoid(torch.cat([Z1, Z2], dim=-1))
+        Z1 = torch.sum(Z1_s * Z1_t, dim=-1)
+        Z21 = torch.sum(Z2_s1 * Z2_t1, dim=-1)
+        Z22 = torch.sum(Z2_s2 * Z2_t2, dim=-1)
+
+        Z = torch.sum(torch.cat([Z1, Z21, Z22], dim=0), dim=0)
+
+        return torch.sigmoid(Z)
 
 class Link_Prediction_LINE():
     '''Link_Prediction_Model
