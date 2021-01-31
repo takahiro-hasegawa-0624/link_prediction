@@ -581,26 +581,30 @@ class Link_Prediction_LINE():
             pos_edge_index = self.data['val_pos_edge_index']
             neg_edge_index = self.data['val_neg_edge_index']
             edge_index = torch.cat([pos_edge_index, neg_edge_index], dim = -1)
-            val_link_probs = self.best_decode_model(edge_index).cpu().detach().clone()
+            z = self.decode_model(edge_index)
+            val_link_probs = torch.cat([torch.sigmoid(z[:pos_edge_index.size(1)]), torch.sigmoid(-z[pos_edge_index.size(1):])], dim=-1).cpu().detach().clone()
             val_link_labels = my_utils.get_link_labels(pos_edge_index, neg_edge_index).cpu()
 
             pos_edge_index = self.data['test_pos_edge_index']
             neg_edge_index = self.data['test_neg_edge_index']
             edge_index = torch.cat([pos_edge_index, neg_edge_index], dim = -1)
-            test_link_probs = self.best_decode_model(edge_index).cpu().detach().clone()
+            z = self.decode_model(edge_index)
+            test_link_probs = torch.cat([torch.sigmoid(z[:pos_edge_index.size(1)]), torch.sigmoid(-z[pos_edge_index.size(1):])], dim=-1).cpu().detach().clone()
             test_link_labels = my_utils.get_link_labels(pos_edge_index, neg_edge_index).cpu()
 
         else:
             pos_edge_index = self.data['val_pos_edge_index']
             neg_edge_index = self.data['val_neg_edge_index']
             edge_index = torch.cat([pos_edge_index, neg_edge_index], dim = -1)
-            val_link_probs = self.best_decode_model(edge_index).cpu().detach().clone()
+            z = self.decode_model(edge_index)
+            val_link_probs = torch.cat([torch.sigmoid(z[:pos_edge_index.size(1)]), torch.sigmoid(-z[pos_edge_index.size(1):])], dim=-1).cpu().detach().clone()
             val_link_labels = my_utils.get_link_labels(pos_edge_index, neg_edge_index).cpu()
 
             pos_edge_index = self.data['test_pos_edge_index']
             neg_edge_index = self.data['test_neg_edge_index']
             edge_index = torch.cat([pos_edge_index, neg_edge_index], dim = -1)
-            test_link_probs = self.best_decode_model(edge_index).cpu().detach().clone()
+            z = self.decode_model(edge_index)
+            test_link_probs = torch.cat([torch.sigmoid(z[:pos_edge_index.size(1)]), torch.sigmoid(-z[pos_edge_index.size(1):])], dim=-1).cpu().detach().clone()
             test_link_labels = my_utils.get_link_labels(pos_edge_index, neg_edge_index).cpu()
 
         
