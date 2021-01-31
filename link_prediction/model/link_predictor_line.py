@@ -175,6 +175,7 @@ class Link_Prediction_LINE():
     def __call__(self, 
                 encode_modelname='LINE',
                 decode_modelname='LINE',
+                order = 1,
                 activation = None, 
                 sigmoid_bias = False,
                 sigmoid_bias_initial_value=0,
@@ -230,7 +231,8 @@ class Link_Prediction_LINE():
 
         self.encode_model = self.decode_model = LINE(
             data = self.data,
-            num_hidden_channels = num_hidden_channels
+            num_hidden_channels = num_hidden_channels,
+            order= order
         ).to(self.device)
 
 
