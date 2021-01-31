@@ -45,11 +45,11 @@ class LINE(torch.nn.Module):
         self.emb22 = torch.nn.Embedding(data.x.size(1), num_hidden_channels//4)
 
     def forward(self, edge_index):
-        Z1_s = self.emb1(edge_index[0])
-        Z1_t = self.emb1(edge_index[1])
+        Z1_s = self.emb1(edge_index[0]).to(self.device))
+        Z1_t = self.emb1(edge_index[1]).to(self.device))
 
-        Z2_s = self.emb21(torch.cat([edge_index[0], edge_index[1]], dim=-1))
-        Z2_t = self.emb22(torch.cat([edge_index[1], edge_index[0]], dim=-1))
+        Z2_s = self.emb21(torch.cat([edge_index[0], edge_index[1]], dim=-1)).to(self.device))
+        Z2_t = self.emb22(torch.cat([edge_index[1], edge_index[0]], dim=-1)).to(self.device))
 
         Z1 = torch.diagonal(torch.mm(Z1_s, Z1_t.T))
         Z2 = torch.diagonal(torch.mm(Z2_s, Z2_t.T))
